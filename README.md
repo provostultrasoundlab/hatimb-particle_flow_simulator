@@ -18,3 +18,5 @@ Here are the columns signification:
 1. Particle Z spatial position (um)
 
 ![Main Image](/images/bubbles_20umDiameter_5000.png)
+
+![FIG](/images/Pulsatility_GIF.gif)
