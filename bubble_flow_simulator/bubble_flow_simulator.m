@@ -7,7 +7,7 @@ addpath(genpath('C:\Users\hatim\OneDrive - polymtl.ca\Documents\LabUsons\CODES_H
 display = 1; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 100; %(Hz)
-n_bubbles = 1000; % Number of bubbles trajectories generated
+n_bubbles = 5000; % Number of bubbles trajectories generated
 n_bubbles_steady_state = n_bubbles/5;
 t_steady_state = 2; % Desired simulation time (s)
 bubble_size = 5; % Bubble diameter (um)
@@ -141,7 +141,7 @@ N_sample_log = 3.7*d_sample_log -8.2;
 N_sample = exp(N_sample_log);
 %%% Affichage
 if display == 2 
-    figure;
+    figure(4);
     subplot(2,2,1);plot(log_d,log_N,'LineWidth',2);
     hold on; plot(d_sample_log,N_sample_log,'.');
     grid on;title('Dependency of the bubble rate with vessel’s diameter');xlabel('log(d)');ylabel('log(N)');
@@ -415,7 +415,7 @@ for jj = 1:n_bubbles
     %vertices{jj} = laminar_xyz;
     tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, jj, n_bubbles); % Show progress to the user
 end
-save('bubbles_10KHz_3000bb_Erwan.mat','bubbles','-v7.3');
+save('bubbles.mat','bubbles','-v7.3');
 beep2
 %% Plot all trajectories
 if or(display==1,display==2)
@@ -428,7 +428,6 @@ if or(display==1,display==2)
         hold on
         plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),bubbles{jj}.XYZ_laminar(:,2),bubbles{jj}.XYZ_laminar(:,3),'LineWidth',1,'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
         plot1.Color(4) = 0.3;
-        jj
     end
     titre1 = 'Laminar flow simulation with ';
     titre2 = num2str(n_bubbles);
@@ -442,6 +441,45 @@ if or(display==1,display==2)
     view(-75,20)
 end
 drawnow
+%% Sorting Trajectories as a Function of Flow/Radius
+clear flow_array
+flow_array = [];
+for ii = 1:n_bubbles
+    flow_array(ii,1) = mean(bubbles{ii}.radii);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
+                     %* bubbles{ii}.poiseuille;
+end
+% flow_array = flow_array/max(flow_array);
+[flow_array_sorted,flow_array_idx] = sort(flow_array,1,'descend');
+bubbles_tmp = cell(n_bubbles,1);
+for ii = 1:n_bubbles
+    bubbles_tmp{ii} = bubbles{flow_array_idx(ii)};
+end
+bubbles = bubbles_tmp;
+clear bubbles_tmp
+r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
+d_mean_sample_log = log(2*r_mean_sample);
+N_mean_sample_log = 3.7*d_mean_sample_log -8.2;
+N_mean_sample = exp(N_mean_sample_log);
+rand_pdf = floor(randpdf(N_mean_sample,1:n_bubbles,[n_bubbles,1]))+1;
+rand_pdf_times_N = rand_pdf.*r_mean_sample';
+rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
+                    .*max(rand_pdf))+1; % Contains indexes of the bubbles 
+                                        % to take in the SS calculation
+if display == 2
+    figure(96);clf
+    hist(rand_pdf_times_N,100);
+    figure(97);clf
+    hist(rand_pdf,100);title('SS Flow Bubble Probability function');
+    xlabel('Bubble ID');ylabel('N');
+    figure(98);clf
+    plot(r_mean_sample,N_mean_sample);
+    xlabel('r  mean sample');ylabel('N mean sample');
+    figure(99);clf
+    subplot(1,2,1);
+    hist(flow_array_sorted,50); xlabel('N');ylabel('');
+    subplot(1,2,2);
+    plot(flow_array_sorted)
+end
 %% Steady state flow calculation
 clear frames frames_velocities
 dt = bubbles{1}.dt;
@@ -453,6 +491,7 @@ k = 1;  % Bubble per frame counter
 ii = 1; % Frame number
 tot_toc = 0;
 frames_velocities(:,1) = zeros(n_bubbles_steady_state,1);
+probability_fnct = (linspace(0,1,n_bubbles).^2);
 % Simulation time verification
 for jj = 1:length(bubbles)
     if size(bubbles{jj}.XYZ_laminar,1) > max_frames
@@ -464,11 +503,15 @@ if n_frames > max_frames
 else
     frames = NaN(n_bubbles_steady_state,n_frames);
     % Generate first set of bubbles
-    for pp = 1:n_bubbles_steady_state
-        frames(pp,ii) = pp; % IDs
+    pp = 1;
+    while pp <= n_bubbles_steady_state
+        frames(pp,ii) = rand_pdf_times_N(pp); % IDs
         random_index = randi([1 size(bubbles{frames(pp,ii)}.XYZ_laminar,1)],1,1);
         frames(pp,ii+1) = round(floor(random_index/(period/dt))*period/dt +1);    % idx
-        frames(pp,ii+2:5) = bubbles{frames(pp,ii)}.XYZ_laminar(frames(pp,ii+1),:);
+        if(size(bubbles{frames(pp,ii)}.XYZ_laminar,1)>=frames(pp,ii+1)) % condition to prevent an error
+            frames(pp,ii+2:5) = bubbles{frames(pp,ii)}.XYZ_laminar(frames(pp,ii+1),:);
+            pp = pp + 1;
+        end
     end
     bubble_count = bubble_count + n_bubbles_steady_state;
     ii = ii + 5;
@@ -485,7 +528,7 @@ else
                 frames_velocities(k,loop_counter+1) = smooth(frames_velocities(k,loop_counter+1));
             else
                 bubble_count = bubble_count + 1; % add new bubble
-                frames(k,ii) = bubble_count;
+                frames(k,ii) = rand_pdf_times_N(bubble_count);
                 if(pulsatility == 1)
 %                     if(k <= size(bubbles{bubble_count}.wave_delays,2))
 %                         sync_pos = period/dt + mod(bubbles{bubble_count}.wave_delays(k),period/dt)+1;%mod(k,period/dt)+1;
@@ -538,16 +581,16 @@ if or(display==1,display==2)
         pp = 3 + (jj-1)*5;
         c = jet(1001);
         scatter3(frames(:,pp),frames(:,pp+2),frames(:,pp+1),3,...
-            c(ceil(1000*sqrt(sqrt((frames_velocities(:,jj)))))+1,:));
+            c(ceil(1000*sqrt(((frames_velocities(:,jj)))))+1,:));
         axis equal
         xlim([-5 max(pos(:,1))])
         ylim([-5 max(pos(:,3))])
         zlim([-5 max(pos(:,2))])
-        view(54-view_idx*100/samp_freq,21)
-        title([num2str(jj*dt) 's']);
-        darkBackground(gcf)   
+%         view(54-view_idx*100/samp_freq,21)
+        darkBackground(gcf)  
+        view(135,155);camorbit(180,180)
         drawnow
-        set(gca,'GridAlpha',0.5);    
+        set(gca,'GridAlpha',0.5);   
     end
 end
 %% Plot scatter with speeds
