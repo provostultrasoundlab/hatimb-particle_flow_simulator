@@ -415,7 +415,6 @@ for jj = 1:n_bubbles
     %vertices{jj} = laminar_xyz;
     tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, jj, n_bubbles); % Show progress to the user
 end
-save('bubbles.mat','bubbles','-v7.3');
 beep2
 %% Plot all trajectories
 if or(display==1,display==2)
@@ -456,6 +455,7 @@ for ii = 1:n_bubbles
 end
 bubbles = bubbles_tmp;
 clear bubbles_tmp
+save('bubbles.mat','bubbles','-v7.3');
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
 d_mean_sample_log = log(2*r_mean_sample);
 N_mean_sample_log = 3.7*d_mean_sample_log -8.2;
