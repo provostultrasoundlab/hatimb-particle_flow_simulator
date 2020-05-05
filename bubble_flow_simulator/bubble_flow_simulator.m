@@ -2,25 +2,27 @@ clear all
 close all
 clc
 %% Path
-addpath(genpath('C:\Users\hatim\OneDrive - polymtl.ca\Documents\LabUsons\CODES_HATIM\Rafat\ForHatim'));
+addpath(genpath('C:\Users\hatim\Documents\GitHub\hatimb-particle_flow_simulator'));
 %% Visualize
 display = 1; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 100; %(Hz)
-n_bubbles = 5000; % Number of bubbles trajectories generated
-n_bubbles_steady_state = n_bubbles/5;
+n_bubbles = 1000; % Number of bubbles trajectories generated
+n_bubbles_steady_state = n_bubbles/5; % 1/5th is taken to avoid shortage of bubbles
 t_steady_state = 2; % Desired simulation time (s)
 bubble_size = 5; % Bubble diameter (um)
+pulsatility = 1; % 1 = Yes | 0 = No
+save_file_name = 'my_first_set';
 %% Loading
-name = 'tree5';
+name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
 g = importdata(filename);
 %% Variables
-target = g(:,1);      % IDs
-source = g(:,7);  % Parent node
-pos = g(:,3:5);   % Positions [x,y,z]
-r = g(:,6);%r_temp = g(:,6);       % Radius
-r_norm = r./max(r);
+target = g(:,1);    % Nodes IDs
+source = g(:,7);    % Parent node
+pos = g(:,3:5);     % Positions [x,y,z]
+r = g(:,6);         % Nodes Radii
+r_norm = r./max(r); % Normalized Radii [0,1]
 r_inverse = 1./r;
 r_inverse_norm = 1./r_norm;
 %% Viewing graph nodes
@@ -36,7 +38,7 @@ if display == 1
     zlabel('z (\mum)')
 end
 drawnow
-%% Positions scaling
+%% Positions scaling % Use only for anisotropic dataset
 % dim_1 = 2; % (um)
 % dim_2 = 2; % (um)
 % dim_3 = 50; % (um)
@@ -44,10 +46,6 @@ drawnow
 % pos(:,2) = pos(:,2) * dim_2;
 % pos(:,3) = pos(:,3) * dim_3;
 % r = r .* (dim_1+dim_2)/2;
-%% Smoothing radius
-r_orig_smooth = smooth(r,0.1);
-r_smooth = smooth(r_norm,0.1); % Smoothed Radius
-r_norm = r_smooth;
 %% Graph
 s = source+2;
 t = target+2;
@@ -69,6 +67,7 @@ biff_nodes = s(indexToDupes-1)-1;
 % title('Bifurcations');
 %% Directed graph visualisation
 if display == 2
+    disp('Directed graph visualisation')
     start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
     finish = start + randi([1 size(s,1)-start-1],1,1); % random integer from [start:#target_nodes-start]
     DG = digraph(s,t); % Directed graph generation
@@ -97,8 +96,8 @@ total_vessels_length = 0;
 vectors_volume_calc = pos(t(1:length(t)-1),:)-pos(s(1:length(t)-1),:); % Parallel vectors between all nodes
 distances_volume_calc = sqrt(sum(diff(vectors_volume_calc,[],1).^2,2)); % Euclidian norms calculation
 length_volume_calc = sum(distances_volume_calc);% um
-mean_radius = mean(r_orig_smooth); % um
-total_vessel_volume = length_volume_calc*pi()*mean_radius.^2; % um^3
+mean_radius = mean(r); % um
+total_vessel_volume = length_volume_calc*pi()*mean_radius.^2; % um^3 % This is the cumulative trajectories volume! Not network volume
 disp(['Total vasculature volume = ' num2str(total_vessel_volume*1E-9) ' mm^3']);
 whole_volume = (max(pos(:,1))-min(pos(:,1)))*(max(pos(:,2))-min(pos(:,2)))*(max(pos(:,3))-min(pos(:,3)));
 disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
@@ -106,8 +105,9 @@ vessel_volume_mL = total_vessel_volume*1E-9/1000;
 C_MB = 2E5; % Concentration of MicroBubbles in the bloodstream, Hingot et al, 2019
 n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in the studied vessels
 disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
-%% Affichage des points extremes
-if display == 2
+%% Extremity points visualization (Computationally heavy)
+if display == 3
+    disp('Extremity points visualization')
     DG_display = digraph(s,t,r_inverse); % Directed graph generation
     figure(3);clf;f = plot(DG_display,'Layout','force');
     f.XData = [pos(1,1);pos(:,1)];
@@ -132,11 +132,11 @@ d = exp(log_d);
 N = exp(log_N);
 log_v = 1.9*log_d -6;
 v = exp(log_v);
-d_sample_log = log(2*r_orig_smooth);
+d_sample_log = log(2*r);
 v_sample_log = 1.9*(d_sample_log) -6;
 v_sample = exp(v_sample_log);
 v_sample_um = v_sample*1000;
-d_sample = 2*r_orig_smooth;
+d_sample = 2*r;
 N_sample_log = 3.7*d_sample_log -8.2;
 N_sample = exp(N_sample_log);
 %%% Affichage
@@ -206,10 +206,9 @@ tot_toc = 0; % For displaying progress to the user
 min_length = 200; % Minimum bubble trajectory length (um)
 min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
 DG = digraph(s,t,r_inverse); % Directed graph generation
-pulsatility = 1; % 1 = Yes | 0 = No
 velocity_multiplicator = 1; % Multiplies velocities according to Hingot V et al, 2019
 v_propagation = NaN;
-v_propagation_manual = 88000;
+v_propagation_manual = 500; % (mm/s) Velocity of the pulse. To be determined
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 for jj = 1:n_bubbles
@@ -277,7 +276,7 @@ for jj = 1:n_bubbles
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1)); % This is the important array which contains the distances between the new nodes
                         k = k+1;
-                        if(r_orig_smooth(nodes(closest_nodes(k-2))) - padding_bubble)<=0
+                        if(r(nodes(closest_nodes(k-2))) - padding_bubble)<=0
                             bubble_can_go_through=0;
                         end
                     end
@@ -299,7 +298,7 @@ for jj = 1:n_bubbles
                         end
                         new_distances(k,1) = dd;%dd + inter_distance*r_norm(closest_nodes(k-1));
                         k = k+1;
-                        if(r_orig_smooth(nodes(closest_nodes(k-2))) - padding_bubble)<=0
+                        if(r(nodes(closest_nodes(k-2))) - padding_bubble)<=0
                             bubble_can_go_through=0;
                         end
                     end
@@ -401,7 +400,7 @@ for jj = 1:n_bubbles
 %     lin_combination_smooth = smooth(lin_combination,'loess');
 %     lin_combination_smooth = reshape(lin_combination_smooth,[size(lin_combination,1) 3]);
 %     lin_combination = lin_combination_smooth;
-    radii = abs(r_orig_smooth(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
+    radii = abs(r(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
     bubbles{jj}.radii = radii;
     %compensation_radii = radii(2:end,1)-radii(1:end-1,1); % Difference in radius between each node
     %compensation_radii = (radii(3:end,1)-radii(1:end-2,1))/2; % Centered difference in radius between each node with error of order 2
@@ -428,7 +427,7 @@ if or(display==1,display==2)
         plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),bubbles{jj}.XYZ_laminar(:,2),bubbles{jj}.XYZ_laminar(:,3),'LineWidth',1,'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
         plot1.Color(4) = 0.3;
     end
-    titre1 = 'Laminar flow simulation with ';
+    titre1 = 'Laminar flow simulation with';
     titre2 = num2str(n_bubbles);
     titre3 = ' trajectories.';
     titre_final = [titre1 titre2 ' ' titre3];
@@ -437,14 +436,15 @@ if or(display==1,display==2)
     xlabel('x','FontSize',20);
     ylabel('y','FontSize',20);
     zlabel('z','FontSize',20);
-    view(-75,20)
+    axis equal tight
+    view(-22,-22)
 end
 drawnow
 %% Sorting Trajectories as a Function of Flow/Radius
 clear flow_array
 flow_array = [];
-for ii = 1:n_bubbles
-    flow_array(ii,1) = mean(bubbles{ii}.radii);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
+for ii = 1:n_bubbles % Sorting as a function of r^2
+    flow_array(ii,1) = mean(bubbles{ii}.radii.^2);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
                      %* bubbles{ii}.poiseuille;
 end
 % flow_array = flow_array/max(flow_array);
@@ -455,7 +455,9 @@ for ii = 1:n_bubbles
 end
 bubbles = bubbles_tmp;
 clear bubbles_tmp
-save('bubbles.mat','bubbles','-v7.3');
+save(['bubbles_',save_file_name,'_.mat'],'bubbles','samp_freq',...
+    'n_bubbles','t_steady_state','bubble_size','pulsatility','filename',...
+    '-v7.3');
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
 d_mean_sample_log = log(2*r_mean_sample);
 N_mean_sample_log = 3.7*d_mean_sample_log -8.2;
@@ -560,13 +562,15 @@ else
     tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, loop_counter, n_frames);
     end
     max_velocity = max(max(frames_velocities));
-    frames_velocities = frames_velocities./max_velocity;
+%     frames_velocities = frames_velocities./max_velocity;
     frames_label = ['Bubble ID | Bubble index | X(um) | Y(um) | Z(um)'];
     frames_param.dt = dt;
     frames_param.pulsatility = pulsatility;
     frames_param.t_f = t_f;
     frames_param.n_frames = n_frames;
-    save('frames.mat','frames_label','frames','frames_velocities','-v7.3');
+    save(['frames_',save_file_name,'.mat'],'frames_label','frames',...
+        'frames_velocities','samp_freq','n_bubbles','t_steady_state',...
+        'bubble_size','pulsatility','filename','-v7.3');
 end
 beep2
 %% Plot steady state flow
@@ -576,17 +580,17 @@ if or(display==1,display==2)
     grid on
     n_frames = size(frames,2)/5;
     fast_forward = 1;
-    for jj = 1:fast_forward:n_frames-1
+    for jj = 2:fast_forward:n_frames % Starting at 2 since initial velocities are 0
         view_idx = jj/30;
         pp = 3 + (jj-1)*5;
         c = jet(1001);
         scatter3(frames(:,pp),frames(:,pp+2),frames(:,pp+1),3,...
-            c(ceil(1000*sqrt(((frames_velocities(:,jj)))))+1,:));
+        c(ceil(1000*sqrt(((frames_velocities(:,jj)./max(max(frames_velocities(:,jj)))))))+1,:));
         axis equal
-        xlim([-5 max(pos(:,1))])
-        ylim([-5 max(pos(:,3))])
-        zlim([-5 max(pos(:,2))])
-%         view(54-view_idx*100/samp_freq,21)
+        xlim([min(pos(:,1)) max(pos(:,1))]); xlabel('x (\mum)');
+        ylim([min(pos(:,3)) max(pos(:,3))]); zlabel('z (\mum)');
+        zlim([min(pos(:,2)) max(pos(:,2))]); ylabel('y (\mum)');
+%         view(54-view_idx*100/samp_freq,21) % For rotating view
         darkBackground(gcf)  
         view(135,155);camorbit(180,180)
         drawnow
@@ -598,7 +602,7 @@ if display == 2
     % Velocities calculation
     max_d = 0;
     dt = bubbles{1}.dt;
-    n_bubbles = 100;%size(bubbles,1);
+    n_bubbles = size(bubbles,1);
     for jj = 1:n_bubbles
         if(~isempty(bubbles{jj}.XYZ_laminar))
             if(size(bubbles{jj}.XYZ_laminar,1)>=2)
@@ -625,7 +629,10 @@ if display == 2
         if(~isempty(bubbles{jj}.XYZ_laminar))
             if(size(bubbles{jj}.XYZ_laminar,1)>=2)
                 n = length(bubbles{jj}.velocities);
-                h = scatter3(bubbles{jj}.XYZ_laminar(:,1), bubbles{jj}.XYZ_laminar(:,2), bubbles{jj}.XYZ_laminar(:,3),1,[bubbles{jj}.velocities_normalized]);
+                h = scatter3(bubbles{jj}.XYZ_laminar(:,1),...
+                    bubbles{jj}.XYZ_laminar(:,2), ...
+                    bubbles{jj}.XYZ_laminar(:,3),1,...
+                    [bubbles{jj}.velocities_normalized],'Filled');
                 alpha = bubbles{jj}.poiseuille;
                 set(h, 'MarkerEdgeAlpha', alpha, 'MarkerFaceAlpha', alpha)
                 hold on
@@ -647,7 +654,7 @@ if display == 2
     figure(8);
     clf
     set(gcf,'color','w');
-    title('Simulation of 1000 bubbles following a laminar flow');
+    title('Simulation bubbles following a laminar flow');
     hold on
     scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled') % Shortest path nodes);
     xlabel('x','FontSize',20);
