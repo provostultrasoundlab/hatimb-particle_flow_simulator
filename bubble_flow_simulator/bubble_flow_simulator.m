@@ -584,22 +584,24 @@ if or(display==1,display==2)
     figure(5);clf
     grid on
     n_frames = size(frames,2)/5;
-    fast_forward = 1;
-    for jj = 2:fast_forward:n_frames % Starting at 2 since initial velocities are 0
+    fast_forward = 8;
+    moving_average = 10;
+    for jj = 11:fast_forward:n_frames-moving_average % Starting at 2 since initial velocities are 0
         view_idx = jj/30;
         pp = 3 + (jj-1)*5;
         c = jet(1001);
         scatter3(frames(:,pp),frames(:,pp+2),frames(:,pp+1),3,...
-        c(ceil(1000*sqrt(((frames_velocities(:,jj)./max(max(frames_velocities(:,jj)))))))+1,:));
+        c(ceil(1000*sqrt(((frames_velocities(:,jj)./max(max(frames_velocities(:,jj-moving_average:jj+moving_average)))))))+1,:));
         axis equal
         xlim([min(pos(:,1)) max(pos(:,1))]); xlabel('x (\mum)');
         ylim([min(pos(:,3)) max(pos(:,3))]); zlabel('z (\mum)');
         zlim([min(pos(:,2)) max(pos(:,2))]); ylabel('y (\mum)');
 %         view(54-view_idx*100/samp_freq,21) % For rotating view
-        darkBackground(gcf)  
         view(135,155);camorbit(180,180)
-        drawnow
         set(gca,'GridAlpha',0.5);   
+        title([num2str(round(jj/samp_freq,2)) ' s'])
+        darkBackground(gcf)
+        drawnow
     end
 end
 %% Plot scatter with speeds
