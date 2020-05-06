@@ -461,8 +461,8 @@ end
 bubbles = bubbles_tmp;
 clear bubbles_tmp
 save([save_path 'bubbles_',save_file_name,'_.mat'],'bubbles','samp_freq',...
-    'n_bubbles','t_steady_state','bubble_size','pulsatility','filename',...
-    '-v7.3');
+    'n_bubbles','n_bubbles_steady_state','t_steady_state','bubble_size',...
+    'pulsatility','filename','-v7.3');
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
 d_mean_sample_log = log(2*r_mean_sample);
 N_mean_sample_log = 3.7*d_mean_sample_log -8.2;
@@ -574,8 +574,8 @@ else
     frames_param.t_f = t_f;
     frames_param.n_frames = n_frames;
     save([save_path 'frames_',save_file_name,'.mat'],'frames_label','frames',...
-        'frames_velocities','samp_freq','n_bubbles','t_steady_state',...
-        'bubble_size','pulsatility','filename','-v7.3');
+        'frames_velocities','samp_freq','n_bubbles','n_bubbles_steady_state',...
+        't_steady_state','bubble_size','pulsatility','filename','-v7.3');
 end
 beep2
 %% Plot steady state flow
