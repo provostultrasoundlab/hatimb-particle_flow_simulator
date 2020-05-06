@@ -2,7 +2,7 @@ clear all
 close all
 clc
 %% Path
-addpath(genpath('C:\Users\hatim\Documents\GitHub\hatimb-particle_flow_simulator'));
+addpath(genpath('..\hatimb-particle_flow_simulator\'));
 %% Visualize
 display = 1; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
