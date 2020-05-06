@@ -1,8 +1,13 @@
 clear all
 close all
 clc
-%% Path
+%% Path and Folders Management
 addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
+root = dir('..\..\');
+root_dir = root(1).folder;
+save_dir = 'hatimb-particle_flow_simulator_DATA';
+mkdir(root_dir,save_dir);
+save_path = [root_dir save_dir '\'];
 %% Visualize
 display = 1; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
@@ -455,7 +460,7 @@ for ii = 1:n_bubbles
 end
 bubbles = bubbles_tmp;
 clear bubbles_tmp
-save(['bubbles_',save_file_name,'_.mat'],'bubbles','samp_freq',...
+save([save_path 'bubbles_',save_file_name,'_.mat'],'bubbles','samp_freq',...
     'n_bubbles','t_steady_state','bubble_size','pulsatility','filename',...
     '-v7.3');
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
@@ -568,7 +573,7 @@ else
     frames_param.pulsatility = pulsatility;
     frames_param.t_f = t_f;
     frames_param.n_frames = n_frames;
-    save(['frames_',save_file_name,'.mat'],'frames_label','frames',...
+    save([save_path 'frames_',save_file_name,'.mat'],'frames_label','frames',...
         'frames_velocities','samp_freq','n_bubbles','t_steady_state',...
         'bubble_size','pulsatility','filename','-v7.3');
 end
