@@ -1,5 +1,7 @@
 function x=randpdf(p,px,dim)
 % RANDPDF
+% [https://www.mathworks.com/matlabcentral/fileexchange/26003-...
+% random-numbers-from-a-user-defined-distribution]
 %   Random numbers from a user defined distribution
 %
 % SYNTAX:
