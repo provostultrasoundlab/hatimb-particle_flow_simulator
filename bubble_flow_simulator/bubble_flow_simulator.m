@@ -250,7 +250,7 @@ for jj = 1:n_bubbles
         distances_cum = cumsum(distances); % Cumulated distances
         xyz = trajectory';
         spline_f = cscvn(xyz); % Creation of the cubic splines
-        coefficients = spline_f.coefs; % Getting the coefficients
+        bubbles{jj}.coefficients = spline_f.coefs; % Getting the coefficients
         start = 0; % (um) % Starting distance from first node
         %%% Vary the distance according to the closest node's radius
         dd = 0;
@@ -361,24 +361,27 @@ for jj = 1:n_bubbles
         %%%%% coefficients
         L = length(new_distances)-1;
         d = new_distances;
-        delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
+        bubbles{jj}.delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
         % point calculation using spline
-        pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
-        ax = coefficients(pp,1);
-        bx = coefficients(pp,2);
-        cx = coefficients(pp,3);
-        dx = coefficients(pp,4);
-        X = ax.*(delta.^3) + bx.*(delta.^2) + cx.*(delta) + dx; % X component
-        ay = coefficients(pp+1,1);
-        by = coefficients(pp+1,2);
-        cy = coefficients(pp+1,3);
-        dy = coefficients(pp+1,4);
-        Y = ay.*(delta.^3) + by.*(delta.^2) + cy.*(delta) + dy; % Y component
-        az = coefficients(pp+2,1);
-        bz = coefficients(pp+2,2);
-        cz = coefficients(pp+2,3);
-        dz = coefficients(pp+2,4);
-        Z = az.*(delta.^3) + bz.*(delta.^2) + cz.*(delta) + dz;  % Z component
+        bubbles{jj}.pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
+        ax = bubbles{jj}.coefficients(bubbles{jj}.pp,1);
+        bx = bubbles{jj}.coefficients(bubbles{jj}.pp,2);
+        cx = bubbles{jj}.coefficients(bubbles{jj}.pp,3);
+        dx = bubbles{jj}.coefficients(bubbles{jj}.pp,4);
+        X = ax.*(bubbles{jj}.delta.^3) + bx.*(bubbles{jj}.delta.^2) +...
+            cx.*(bubbles{jj}.delta) + dx; % X component
+        ay = bubbles{jj}.coefficients(bubbles{jj}.pp+1,1);
+        by = bubbles{jj}.coefficients(bubbles{jj}.pp+1,2);
+        cy = bubbles{jj}.coefficients(bubbles{jj}.pp+1,3);
+        dy = bubbles{jj}.coefficients(bubbles{jj}.pp+1,4);
+        Y = ay.*(bubbles{jj}.delta.^3) + by.*(bubbles{jj}.delta.^2) +...
+            cy.*(bubbles{jj}.delta) + dy; % Y component
+        az = bubbles{jj}.coefficients(bubbles{jj}.pp+2,1);
+        bz = bubbles{jj}.coefficients(bubbles{jj}.pp+2,2);
+        cz = bubbles{jj}.coefficients(bubbles{jj}.pp+2,3);
+        dz = bubbles{jj}.coefficients(bubbles{jj}.pp+2,4);
+        Z = az.*(bubbles{jj}.delta.^3) + bz.*(bubbles{jj}.delta.^2) +...
+            cz.*(bubbles{jj}.delta) + dz;  % Z component
         bubbles{jj}.XYZ_centerLine = horzcat(X,Y,Z);
     end
     %%% Laminar flow calculation
@@ -396,7 +399,9 @@ for jj = 1:n_bubbles
         perpendicular2(i,:) = perpendiculars(:,2)'; %perpendicular vector 2
     end
     %%% linear combination
-    lin_combination = (-1+2*rand(1))*perpendicular+(-1+2*rand(1))*perpendicular2;
+    bubbles{jj}.random_combination = rand(1);
+    lin_combination = (-1+2*bubbles{jj}.random_combination)*perpendicular+...
+                      (-1+2*bubbles{jj}.random_combination)*perpendicular2;
     %%% Normalize the lin_combination vector to obtain a circular
     %%% distribution rather than a rectangular one
     lin_combination = lin_combination./norm(max(lin_combination));
@@ -405,15 +410,14 @@ for jj = 1:n_bubbles
 %     lin_combination_smooth = smooth(lin_combination,'loess');
 %     lin_combination_smooth = reshape(lin_combination_smooth,[size(lin_combination,1) 3]);
 %     lin_combination = lin_combination_smooth;
-    radii = abs(r(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
-    bubbles{jj}.radii = radii;
+    bubbles{jj}.radii = abs(r(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
     %compensation_radii = radii(2:end,1)-radii(1:end-1,1); % Difference in radius between each node
     %compensation_radii = (radii(3:end,1)-radii(1:end-2,1))/2; % Centered difference in radius between each node with error of order 2
     %compensation_radii = smooth(compensation_radii,0.1); % smoothing the derivative curve
     %compensation_rayon_cumul = cumsum(compensation_radii); % Cumulative difference of the radii between each node
     %laminar_xyz = zeros(length(xyz),3);
     %laminar_xyz(1,:) = xyz(1,:)+ lin_combination(1,:).*radii(1); % Point_coordinates + perpendicular_component * radius
-    laminar_xyz = xyz(1:end-1,:) + lin_combination.*radii(1:end-1);
+    laminar_xyz = xyz(1:end-1,:) + lin_combination.*bubbles{jj}.radii(1:end-1);
     bubbles{jj}.XYZ_laminar = laminar_xyz;
     bubbles{jj}.ID = jj;
     %vertices{jj} = laminar_xyz;
