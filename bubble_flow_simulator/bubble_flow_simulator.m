@@ -5,7 +5,7 @@ clc
 addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
 root = dir('..\..\');
 root_dir = root(1).folder;
-save_dir = 'hatimb-particle_flow_simulator_DATA';
+save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 %% Visualize
@@ -54,15 +54,14 @@ drawnow
 %% Graph
 s = source+2;
 t = target+2;
-C = setxor(s,1:length(s));
-end_nodes = [C-1;s(end)];
+C = setxor(s,1:length(s)); % Finding missing parents
+end_nodes = [C-1;s(end)];  % Adding last extremity
 clear C
 %% Finding bifurcations
 clear A
-A = s;
-[uniqueA i j] = unique(A,'first');
-indexToDupes = find(not(ismember(1:numel(A),i)));
-biff_nodes = s(indexToDupes-1)-1;
+[uniqueA, i, j] = unique(s,'first');              % Finding duplicates
+indexToDupes = find(not(ismember(1:numel(s),i))); % in source nodes
+biff_nodes = s(indexToDupes-1)-1;                 % Convert idx to nodes
 % figure(72);
 % clf
 % %scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled');
@@ -167,7 +166,7 @@ if display == 2
     %figure;plot(d,v,'LineWidth',2);xlabel('d (um)');ylabel('v');title('Sample velocities');
     %axis([15 45 0 3.5]);
 end
-%% Poiseuille
+%% Poiseuille distribution
 x = linspace(-1,1,1000);
 v_poiseuille = 1-x.^2;
 v_poiseuille_squared = v_poiseuille.^2;
@@ -399,9 +398,10 @@ for jj = 1:n_bubbles
         perpendicular2(i,:) = perpendiculars(:,2)'; %perpendicular vector 2
     end
     %%% linear combination
-    bubbles{jj}.random_combination = rand(1);
-    lin_combination = (-1+2*bubbles{jj}.random_combination)*perpendicular+...
-                      (-1+2*bubbles{jj}.random_combination)*perpendicular2;
+    bubbles{jj}.random_combination1 = rand(1);
+    bubbles{jj}.random_combination2 = rand(1);
+    lin_combination = (-1+2*bubbles{jj}.random_combination1)*perpendicular+...
+                      (-1+2*bubbles{jj}.random_combination2)*perpendicular2;
     %%% Normalize the lin_combination vector to obtain a circular
     %%% distribution rather than a rectangular one
     lin_combination = lin_combination./norm(max(lin_combination));
@@ -478,7 +478,8 @@ rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                                         % to take in the SS calculation
 if display == 2
     figure(96);clf
-    hist(rand_pdf_times_N,100);
+    hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
+    xlabel('Bubble ID');ylabel('N');
     figure(97);clf
     hist(rand_pdf,100);title('SS Flow Bubble Probability function');
     xlabel('Bubble ID');ylabel('N');
