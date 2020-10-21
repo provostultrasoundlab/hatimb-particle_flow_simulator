@@ -146,22 +146,26 @@ N_sample = exp(N_sample_log);
 %%% Affichage
 if display == 2 
     figure(4);clf
-    subplot(2,2,1);plot(log_d,log_N,'LineWidth',2);
+    subplot(2,3,1);plot(log_d,log_N,'LineWidth',2);
     hold on; plot(d_sample_log,N_sample_log,'.');
     grid on;title('Dependency of the bubble rate with vessel’s diameter');xlabel('log(d)');ylabel('log(N)');
     axis([0 5 0 8]);
-    subplot(2,2,2);plot(d,N,'LineWidth',2);
+    subplot(2,3,2);plot(d,N,'LineWidth',2);
     hold on; plot(d_sample,N_sample,'.');
     grid on;title('Dependency of the bubble rate with vessel’s diameter');xlabel('d (um)');ylabel('N');
+    subplot(2,3,3);plot(d_sample,N_sample,'.');
+    grid on;title('Sample dependency of the bubble rate with vessel’s diameter');xlabel('d (um)');ylabel('N');
     %%% v
-    subplot(2,2,3);plot(log_d,log_v,'LineWidth',2);
+    subplot(2,3,4);plot(log_d,log_v,'LineWidth',2);
     hold on; plot(d_sample_log,v_sample_log,'.');
     legend('Hingot','Sample data','Location','Best');
     grid on;title('Dependency of maximum velocity with vessel’s diameter');xlabel('log(d)');ylabel('log(v)');
     axis([0 5 -5 4]);
-    subplot(2,2,4);plot(d,v,'LineWidth',2);
+    subplot(2,3,5);plot(d,v,'LineWidth',2);
     hold on; plot(d_sample,v_sample,'.');
     legend('Hingot','Sample data','Location','Best');
+    grid on;title('Dependency of maximum velocity with vessel’s diameter');xlabel('d (um)');ylabel('v (mm/s)');
+    subplot(2,3,6);plot(d_sample,v_sample,'.');
     grid on;title('Dependency of maximum velocity with vessel’s diameter');xlabel('d (um)');ylabel('v (mm/s)');
     %figure;plot(d,v,'LineWidth',2);xlabel('d (um)');ylabel('v');title('Sample velocities');
     %axis([15 45 0 3.5]);
