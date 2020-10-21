@@ -145,7 +145,7 @@ N_sample_log = 3.7*d_sample_log -8.2;
 N_sample = exp(N_sample_log);
 %%% Affichage
 if display == 2 
-    figure(4);
+    figure(4);clf
     subplot(2,2,1);plot(log_d,log_N,'LineWidth',2);
     hold on; plot(d_sample_log,N_sample_log,'.');
     grid on;title('Dependency of the bubble rate with vessel’s diameter');xlabel('log(d)');ylabel('log(N)');
