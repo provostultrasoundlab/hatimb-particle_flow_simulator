@@ -452,8 +452,8 @@ drawnow
 %% Sorting Trajectories as a Function of Flow/Radius
 clear flow_array
 flow_array = [];
-for ii = 1:n_bubbles % Sorting as a function of r^2
-    flow_array(ii,1) = mean(bubbles{ii}.radii.^2);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
+for ii = 1:n_bubbles % Sorting as a function of r
+    flow_array(ii,1) = mean(bubbles{ii}.radii);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
                      %* bubbles{ii}.poiseuille;
 end
 % flow_array = flow_array/max(flow_array);
