@@ -9,13 +9,13 @@ save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 %% Visualize
-display = 1; % 0: No display, 1: Minimal display, 2: All displays
+display = 0; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 100; %(Hz)
-n_bubbles = 1000; % Number of bubbles trajectories generated
+n_bubbles = 100000; % Number of bubbles trajectories generated
 n_bubbles_steady_state = n_bubbles/5; % 1/5th is taken to avoid shortage of bubbles
 t_steady_state = 2; % Desired simulation time (s)
-bubble_size = 5; % Bubble diameter (um)
+bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
 save_file_name = 'my_first_set';
 %% Loading
@@ -454,11 +454,16 @@ if or(display==1,display==2)
 end
 drawnow
 %% Sorting Trajectories as a Function of Flow/Radius
+disp('Sorting trajectories...');
 clear flow_array
 flow_array = [];
+RADII = [];
+radii_idx = 1;
 for ii = 1:n_bubbles % Sorting as a function of r
     flow_array(ii,1) = mean(bubbles{ii}.radii);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
                      %* bubbles{ii}.poiseuille;
+    RADII(radii_idx:radii_idx+numel(bubbles{ii}.radii)-1) = bubbles{ii}.radii;
+    radii_idx = radii_idx + numel(bubbles{ii}.radii);
 end
 % flow_array = flow_array/max(flow_array);
 [flow_array_sorted,flow_array_idx] = sort(flow_array,1,'descend');
@@ -481,6 +486,8 @@ rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                     .*max(rand_pdf))+1; % Contains indexes of the bubbles 
                                         % to take in the SS calculation
 if display == 2
+    figure;clf;
+    hist(RADII,25);title('RADII');xlabel('r (\mum)');ylabel('N');
     figure(96);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
@@ -492,7 +499,9 @@ if display == 2
     xlabel('r  mean sample');ylabel('N mean sample');
     figure(99);clf
     subplot(1,2,1);
-    hist(flow_array_sorted,50); xlabel('N');ylabel('');
+    n = ceil(max(r_mean_sample));
+    hist(flow_array_sorted,n); xlabel('r');ylabel('');
+    title('Hist flow array sorted');
     subplot(1,2,2);
     plot(flow_array_sorted)
 end
