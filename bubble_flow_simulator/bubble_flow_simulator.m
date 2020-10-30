@@ -242,6 +242,29 @@ subplot(1,4,3);
 plot(min_RADII_sorted,'.');title('Radius - MIN');ylabel('Min trajectory radius (\mum)');
 subplot(1,4,4);
 plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
+%% Trajectories selection probability
+radii = min_RADII_sorted; % rounding to units
+end_nodes_sorted = end_nodes(Idx_min);
+radii_rounded = round(min_RADII_sorted);
+radii_unique = unique(radii_rounded);
+% radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
+n_radii = numel(radii_unique);% number of differrent radii
+N_traject_log = 3.7*(log(radii*2)) -8.2;
+% N_traject_continuous_log = 3.7*(log(radii_unique_continuous*2)) -8.2;
+N_traject = exp(N_traject_log);
+% N_traject_continuous = exp(N_traject_continuous_log);
+% N_traject_continuous_norm = N_traject_continuous/sum(N_traject_continuous);
+% Let's normalize the N so that sum(N) = 1
+% Let's account for that
+radii_count = histc(radii_rounded, radii_unique); % this willgive the number of occurences of each unique element
+radii_count = fliplr(radii_count);
+radii_unique = sort(radii_unique,'descend');
+for i = 1:numel(radii_unique)
+    start = sum(radii_count(1:i-1)) + 1;
+    finish = sum(radii_count(1:i));
+    N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i);
+end
+N_traject_norm = N_traject_norm/sum(N_traject_norm);
 %% Simuation
 clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
@@ -272,13 +295,14 @@ for jj = 1:n_bubbles
     clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
     %fprintf('2\n');
     while 1 % create new trajectory while too short
-        random_end_node = randi([1 length(end_nodes)],1,1);
+        random_end_node = 1+round(pdfrnd(0:numel(end_nodes)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
         start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
-        [SP, ~] = shortestpathtree(DG,start,end_nodes(random_end_node)); % Shortest path
+        [SP, ~] = shortestpathtree(DG,start,end_nodes_sorted(random_end_node)); % Shortest path
         edges = table2array(SP.Edges);
         nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
         trajectory = pos(nodes,:); % Nodes positions attribution
         d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
+        x = rand(1); % random distribution
         if(d_trajectory > min_length)
             break;
         end
