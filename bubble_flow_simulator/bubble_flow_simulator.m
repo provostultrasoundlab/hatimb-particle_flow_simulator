@@ -9,10 +9,10 @@ save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 %% Visualize
-display = 0; % 0: No display, 1: Minimal display, 2: All displays
+display = 1; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 100; %(Hz)
-n_bubbles = 100000; % Number of bubbles trajectories generated
+n_bubbles = 1000; % Number of bubbles trajectories generated
 n_bubbles_steady_state = n_bubbles/5; % 1/5th is taken to avoid shortage of bubbles
 t_steady_state = 2; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
@@ -206,6 +206,38 @@ ecg_normalized = ecg_filtered3;
 % set(gca,'FontSize',14)
 % grid on
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
+%% Trajectories statistics
+% From start to endnodes
+DG = digraph(s,t,r_inverse); % Directed graph generation
+d_TRAJECTORIES = zeros(1,numel(end_nodes));
+mean_RADII = zeros(1,numel(end_nodes));
+median_RADII = zeros(1,numel(end_nodes));
+min_RADII = zeros(1,numel(end_nodes));
+max_RADII = zeros(1,numel(end_nodes));
+for idx = 1:numel(end_nodes)
+    random_end_node = idx; %randi([1 length(end_nodes)],1,1);
+    start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+    [SP, ~] = shortestpathtree(DG,start,end_nodes(random_end_node)); % Shortest path
+    edges = table2array(SP.Edges);
+    nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
+    trajectory = pos(nodes,:); % Nodes positions attribution
+    d_TRAJECTORIES(idx) = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
+    mean_RADII(idx) = mean(r(nodes));
+    median_RADII(idx) = median(r(nodes));
+    min_RADII(idx) = min(r(nodes));
+    max_RADII(idx) = max(r(nodes));
+end
+figure;clf
+plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
+figure;clf
+subplot(1,4,1);
+plot(mean_RADII,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
+subplot(1,4,2);
+plot(median_RADII,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
+subplot(1,4,3);
+plot(min_RADII,'.');title('Radius - MIN');ylabel('Min trajectory radius (\mum)');
+subplot(1,4,4);
+plot(max_RADII,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
 %% Simuation
 clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
