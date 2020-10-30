@@ -227,10 +227,10 @@ for idx = 1:numel(end_nodes)
     min_RADII(idx) = min(r(nodes));
     max_RADII(idx) = max(r(nodes));
 end
-[mean_RADII_sorted,Idx_mean] = sort(mean_RADII);
-[median_RADII_sorted,Idx_median] = sort(median_RADII);
-[min_RADII_sorted,Idx_min] = sort(min_RADII);
-[max_RADII_sorted,Idx_max] = sort(max_RADII);
+[mean_RADII_sorted,Idx_mean] = sort(mean_RADII,'descend');
+[median_RADII_sorted,Idx_median] = sort(median_RADII,'descend');
+[min_RADII_sorted,Idx_min] = sort(min_RADII,'descend');
+[max_RADII_sorted,Idx_max] = sort(max_RADII,'descend');
 figure;clf
 plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
 figure;clf
