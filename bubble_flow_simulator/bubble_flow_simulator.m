@@ -235,13 +235,13 @@ figure;clf
 plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
 figure;clf
 subplot(1,4,1);
-plot(mean_RADII,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
+plot(mean_RADII_sorted,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
 subplot(1,4,2);
-plot(median_RADII,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
+plot(median_RADII_sorted,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
 subplot(1,4,3);
-plot(min_RADII,'.');title('Radius - MIN');ylabel('Min trajectory radius (\mum)');
+plot(min_RADII_sorted,'.');title('Radius - MIN');ylabel('Min trajectory radius (\mum)');
 subplot(1,4,4);
-plot(max_RADII,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
+plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
 %% Simuation
 clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
