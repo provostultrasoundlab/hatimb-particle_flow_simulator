@@ -9,11 +9,12 @@ save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 %% Visualize
-display = 1; % 0: No display, 1: Minimal display, 2: All displays
+display = 0; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
-samp_freq = 100; %(Hz)
-n_bubbles = 1000; % Number of bubbles trajectories generated
-n_bubbles_steady_state = n_bubbles/5; % 1/5th is taken to avoid shortage of bubbles
+samp_freq = 1000; %(Hz)
+n_bubbles = 200000; % Number of bubbles trajectories generated
+n_bubbles_steady_state = 1000; % 1/5th is taken to avoid shortage of bubbles
+ % 1/5th is taken to avoid shortage of bubbles
 t_steady_state = 2; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
@@ -270,12 +271,12 @@ clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 bubbles = cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
-min_length = 200; % Minimum bubble trajectory length (um)
+min_length = 100; % Minimum bubble trajectory length (um)
 min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
 DG = digraph(s,t,r_inverse); % Directed graph generation
 velocity_multiplicator = 1; % Multiplies velocities according to Hingot V et al, 2019
 v_propagation = NaN;
-v_propagation_manual = 500; % (mm/s) Velocity of the pulse. To be determined
+v_propagation_manual = 5000; % (mm/s) Velocity of the pulse. To be determined
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 for jj = 1:n_bubbles
@@ -547,7 +548,14 @@ rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                                         % to take in the SS calculation
 if display == 2
     figure;clf;
-    hist(RADII,25);title('RADII');xlabel('r (\mum)');ylabel('N');
+    [N_hist,RADII_hist] = hist(RADII,30);title('RADII');xlabel('r (\mum)');ylabel('N');
+    x = log(RADII_hist');
+    y = log(N_hist');
+    X = [ones(length(x),1) x];
+    b = X\y;
+    yCalc2 = X*b;
+    figure;clf;
+    scatter(log(RADII_hist),log(N_hist,'.k'));hold on;plot(x,yCalc2,'--')
     figure(96);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
