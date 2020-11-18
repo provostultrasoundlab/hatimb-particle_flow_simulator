@@ -9,16 +9,16 @@ save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 %% Visualize
-display = 0; % 0: No display, 1: Minimal display, 2: All displays
+display = 4; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 1000; %(Hz)
-n_bubbles = 200000; % Number of bubbles trajectories generated
-n_bubbles_steady_state = 1000; % 1/5th is taken to avoid shortage of bubbles
+n_bubbles = 100000; % Number of bubbles trajectories generated
+n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
  % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 2; % Desired simulation time (s)
+t_steady_state = 0.4; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
-save_file_name = 'my_first_set';
+save_file_name = '100k_bubbles_400ms_v5000_100PerFrame';
 %% Loading
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
@@ -232,6 +232,7 @@ end
 [median_RADII_sorted,Idx_median] = sort(median_RADII,'descend');
 [min_RADII_sorted,Idx_min] = sort(min_RADII,'descend');
 [max_RADII_sorted,Idx_max] = sort(max_RADII,'descend');
+d_TRAJECTORIES_norm = min(d_TRAJECTORIES)./d_TRAJECTORIES;
 figure;clf
 plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
 figure;clf
@@ -250,9 +251,12 @@ radii_rounded = round(min_RADII_sorted);
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
 n_radii = numel(radii_unique);% number of differrent radii
-N_traject_log = 3.7*(log(radii*2)) -8.2;
+N_traject_log = 3.7*(log(radii*2))-8.2;
 % N_traject_continuous_log = 3.7*(log(radii_unique_continuous*2)) -8.2;
 N_traject = exp(N_traject_log);
+(log(N_traject(1))-log(N_traject(2)))/(log(radii(1)*2)-log(radii(2)*2))
+N_traject(1)
+N_traject(2)
 % N_traject_continuous = exp(N_traject_continuous_log);
 % N_traject_continuous_norm = N_traject_continuous/sum(N_traject_continuous);
 % Let's normalize the N so that sum(N) = 1
@@ -265,7 +269,8 @@ for i = 1:numel(radii_unique)
     finish = sum(radii_count(1:i));
     N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i);
 end
-N_traject_norm = N_traject_norm/sum(N_traject_norm);
+N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
+N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf
 %% Simuation
 clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
@@ -304,7 +309,7 @@ for jj = 1:n_bubbles
         trajectory = pos(nodes,:); % Nodes positions attribution
         d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
         x = rand(1); % random distribution
-        if(d_trajectory > min_length)
+        if and((d_trajectory > min_length),x<bubbles{jj}.poiseuille)
             break;
         end
     end
@@ -545,17 +550,27 @@ rand_pdf = floor(randpdf(N_mean_sample,1:n_bubbles,[n_bubbles,1]))+1;
 rand_pdf_times_N = rand_pdf.*r_mean_sample';
 rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                     .*max(rand_pdf))+1; % Contains indexes of the bubbles 
-                                        % to take in the SS calculation
-if display == 2
-    figure;clf;
-    [N_hist,RADII_hist] = hist(RADII,30);title('RADII');xlabel('r (\mum)');ylabel('N');
-    x = log(RADII_hist');
+  %%                                      % to take in the SS calculation
+if display == 4
+    figure(94);clf;
+    max_d = ceil(max(RADII*2));
+    min_d = floor(min(RADII*2));
+    [N_hist,DIAMETER_hist] = hist(RADII*2,max_d-min_d);
+    not_zeros_in_N = not(N_hist==0);
+    N_hist = N_hist(not_zeros_in_N)
+    DIAMETER_hist = DIAMETER_hist(not_zeros_in_N);
+    hist(RADII*2,10);title('DIAMETERS');xlabel('d (\mum)');ylabel('N');
+    x = log(DIAMETER_hist');
     y = log(N_hist');
     X = [ones(length(x),1) x];
-    b = X\y;
+    b = X\y
     yCalc2 = X*b;
-    figure;clf;
-    scatter(log(RADII_hist),log(N_hist,'.k'));hold on;plot(x,yCalc2,'--')
+    yHingot = 3.5*x-8.5;
+    figure(95);clf;
+    scatter(log(DIAMETER_hist),log(N_hist));hold on;plot(x,yCalc2,'--');
+    plot(x,yHingot,'*-')
+    xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs r')
+    %%
     figure(96);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
