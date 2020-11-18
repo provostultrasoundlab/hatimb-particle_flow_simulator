@@ -573,6 +573,8 @@ if display == 4
     scatter(log(DIAMETER_hist),log(N_hist));hold on;plot(x,yCalc2,'--');
     plot(x,yHingot,'*-')
     xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs r')
+    legend_title = ['y = ' num2str(b(2)) 'x + ' num2str(b(1))]
+    legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
     %%
     figure(96);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
