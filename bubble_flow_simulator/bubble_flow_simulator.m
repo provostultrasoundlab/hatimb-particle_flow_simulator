@@ -12,13 +12,13 @@ save_path = [root_dir save_dir '\'];
 display = 4; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 1000; %(Hz)
-n_bubbles = 100000; % Number of bubbles trajectories generated
+n_bubbles = 10000; % Number of bubbles trajectories generated
 n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
  % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 0.4; % Desired simulation time (s)
+t_steady_state = 0.2; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
-save_file_name = '100k_bubbles_400ms_v5000_100PerFrame';
+save_file_name = '10k_bubbles_200ms_v5000_100PerFrame_biff';
 %% Loading
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
@@ -210,15 +210,15 @@ clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 %% Trajectories statistics
 % From start to endnodes
 DG = digraph(s,t,r_inverse); % Directed graph generation
-d_TRAJECTORIES = zeros(1,numel(end_nodes));
-mean_RADII = zeros(1,numel(end_nodes));
-median_RADII = zeros(1,numel(end_nodes));
-min_RADII = zeros(1,numel(end_nodes));
-max_RADII = zeros(1,numel(end_nodes));
-for idx = 1:numel(end_nodes)
-    random_end_node = idx; %randi([1 length(end_nodes)],1,1);
+end_nodes_biff = [end_nodes;biff_nodes]; % Merge endnodes and bifurcation nodes
+d_TRAJECTORIES = zeros(1,numel(end_nodes_biff));
+mean_RADII = zeros(1,numel(end_nodes_biff));
+median_RADII = zeros(1,numel(end_nodes_biff));
+min_RADII = zeros(1,numel(end_nodes_biff));
+max_RADII = zeros(1,numel(end_nodes_biff));
+for idx = 1:numel(end_nodes_biff)
     start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
-    [SP, ~] = shortestpathtree(DG,start,end_nodes(random_end_node)); % Shortest path
+    [SP, ~] = shortestpathtree(DG,start,end_nodes_biff(idx)); % Shortest path
     edges = table2array(SP.Edges);
     nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
     trajectory = pos(nodes,:); % Nodes positions attribution
@@ -246,7 +246,8 @@ subplot(1,4,4);
 plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
 %% Trajectories selection probability
 radii = min_RADII_sorted; % rounding to units
-end_nodes_sorted = end_nodes(Idx_min);
+% end_nodes_sorted = end_nodes(Idx_min);
+end_nodes_biff_sorted = end_nodes_biff(Idx_min);
 radii_rounded = round(min_RADII_sorted);
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
@@ -301,9 +302,9 @@ for jj = 1:n_bubbles
     clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
     %fprintf('2\n');
     while 1 % create new trajectory while too short
-        random_end_node = 1+round(pdfrnd(0:numel(end_nodes)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
+        random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
         start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
-        [SP, ~] = shortestpathtree(DG,start,end_nodes_sorted(random_end_node)); % Shortest path
+        [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
         edges = table2array(SP.Edges);
         nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
         trajectory = pos(nodes,:); % Nodes positions attribution
@@ -502,9 +503,11 @@ if or(display==1,display==2)
     scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled') % Shortest path nodes);
     n_bubbles = size(bubbles,1);
     for jj = 1:n_bubbles
+        jj
         hold on
         plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),bubbles{jj}.XYZ_laminar(:,2),bubbles{jj}.XYZ_laminar(:,3),'LineWidth',1,'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
         plot1.Color(4) = 0.3;
+%         drawnow
     end
     titre1 = 'Laminar flow simulation with';
     titre2 = num2str(n_bubbles);
