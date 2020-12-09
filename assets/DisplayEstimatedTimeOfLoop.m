@@ -30,12 +30,15 @@
 % Keep in mind Hofstadter's Law when using this function :)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [ tot_toc, estimated_time_hours  ] = DisplayEstimatedTimeOfLoop( tot_toc, curr_ix, tot_iter )
+function [ tot_toc, estimated_time_hours  ] = DisplayEstimatedTimeOfLoop( tot_toc, curr_ix, tot_iter)
     if curr_ix == tot_iter
         disp(['Total elapsed time (HH:MM:SS): ' datestr(tot_toc/(24*60*60),'HH:MM:SS') ' - ', num2str(curr_ix)]);
     else
         avg_toc = tot_toc/curr_ix;
         estimated_time_hours = (avg_toc*(tot_iter-curr_ix))/(24*60*60);
-        disp(['Estimated time to finish (HH:MM:SS): ' datestr(estimated_time_hours, 'HH:MM:SS') ' ' num2str(round(curr_ix*100/tot_iter)) '% - ', num2str(curr_ix)]);
+        disp(['Estimated time to finish (HH:MM:SS): ' ...
+            datestr(estimated_time_hours, 'HH:MM:SS') ' ' ...
+            num2str(round(curr_ix*100/tot_iter)) '% - ', ...
+            num2str(curr_ix)]);
     end
 end

@@ -11,13 +11,14 @@ save_path = [root_dir save_dir '\'];
 %% Visualize
 display = 0; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
-samp_freq = 100; %(Hz)
-n_bubbles = 100000; % Number of bubbles trajectories generated
-n_bubbles_steady_state = n_bubbles/5; % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 2; % Desired simulation time (s)
+samp_freq = 1000; %(Hz)
+n_bubbles = 5000; % Number of bubbles trajectories generated
+n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
+ % 1/5th is taken to avoid shortage of bubbles
+t_steady_state = 0.2; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
-save_file_name = 'my_first_set';
+file_name = 'test';
 %% Loading
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
@@ -206,17 +207,86 @@ ecg_normalized = ecg_filtered3;
 % set(gca,'FontSize',14)
 % grid on
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
+%% Trajectories statistics
+% From start to endnodes
+DG = digraph(s,t,r_inverse); % Directed graph generation
+end_nodes_biff = [end_nodes;biff_nodes]; % Merge endnodes and bifurcation nodes
+d_TRAJECTORIES = zeros(1,numel(end_nodes_biff));
+mean_RADII = zeros(1,numel(end_nodes_biff));
+median_RADII = zeros(1,numel(end_nodes_biff));
+min_RADII = zeros(1,numel(end_nodes_biff));
+max_RADII = zeros(1,numel(end_nodes_biff));
+for idx = 1:numel(end_nodes_biff)
+    start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+    [SP, ~] = shortestpathtree(DG,start,end_nodes_biff(idx)); % Shortest path
+    edges = table2array(SP.Edges);
+    nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
+    trajectory = pos(nodes,:); % Nodes positions attribution
+    d_TRAJECTORIES(idx) = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
+    mean_RADII(idx) = mean(r(nodes));
+    median_RADII(idx) = median(r(nodes));
+    min_RADII(idx) = min(r(nodes));
+    max_RADII(idx) = max(r(nodes));
+end
+[mean_RADII_sorted,Idx_mean] = sort(mean_RADII,'descend');
+[median_RADII_sorted,Idx_median] = sort(median_RADII,'descend');
+[min_RADII_sorted,Idx_min] = sort(min_RADII,'descend');
+[max_RADII_sorted,Idx_max] = sort(max_RADII,'descend');
+d_TRAJECTORIES_norm = min(d_TRAJECTORIES)./d_TRAJECTORIES;
+if display == 3
+    figure;clf
+    plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
+    figure;clf
+    subplot(1,4,1);
+    plot(mean_RADII_sorted,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
+    subplot(1,4,2);
+    plot(median_RADII_sorted,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
+    subplot(1,4,3);
+    plot(min_RADII_sorted,'.');title('Radius - MIN');ylabel('Min trajectory radius (\mum)');
+    subplot(1,4,4);
+    plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
+end
+%% Trajectories selection probability
+radii = min_RADII_sorted; % rounding to units
+% end_nodes_sorted = end_nodes(Idx_min);
+end_nodes_biff_sorted = end_nodes_biff(Idx_min);
+radii_rounded = round(min_RADII_sorted);
+radii_unique = unique(radii_rounded);
+% radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
+n_radii = numel(radii_unique);% number of differrent radii
+slope = 9; % TEMPORARY: Forcing a higher slope to get close to Hingot's
+intercept = 0;
+N_traject_log = slope*(log(radii*2))+intercept; %%% TEMPORARY FOR TESTING
+% N_traject_continuous_log = 3.7*(log(radii_unique_continuous*2)) -8.2;
+N_traject = exp(N_traject_log);
+(log(N_traject(1))-log(N_traject(2)))/(log(radii(1)*2)-log(radii(2)*2));
+N_traject(1);
+N_traject(2);
+% N_traject_continuous = exp(N_traject_continuous_log);
+% N_traject_continuous_norm = N_traject_continuous/sum(N_traject_continuous);
+% Let's normalize the N so that sum(N) = 1
+% Let's account for that
+radii_count = histc(radii_rounded, radii_unique); % this willgive the number of occurences of each unique element
+radii_count = fliplr(radii_count);
+radii_unique = sort(radii_unique,'descend');
+for i = 1:numel(radii_unique)
+    start = sum(radii_count(1:i-1)) + 1;
+    finish = sum(radii_count(1:i));
+    N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i);
+end
+% N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
+N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 %% Simuation
 clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 bubbles = cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
-min_length = 200; % Minimum bubble trajectory length (um)
+min_length = 100; % Minimum bubble trajectory length (um)
 min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
 DG = digraph(s,t,r_inverse); % Directed graph generation
 velocity_multiplicator = 1; % Multiplies velocities according to Hingot V et al, 2019
 v_propagation = NaN;
-v_propagation_manual = 500; % (mm/s) Velocity of the pulse. To be determined
+v_propagation_manual = 5000; % (um/s) Velocity of the pulse. To be determined
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 for jj = 1:n_bubbles
@@ -236,14 +306,15 @@ for jj = 1:n_bubbles
     clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
     %fprintf('2\n');
     while 1 % create new trajectory while too short
-        random_end_node = randi([1 length(end_nodes)],1,1);
+        random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
         start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
-        [SP, ~] = shortestpathtree(DG,start,end_nodes(random_end_node)); % Shortest path
+        [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
         edges = table2array(SP.Edges);
         nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
         trajectory = pos(nodes,:); % Nodes positions attribution
         d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
-        if(d_trajectory > min_length)
+        x = rand(1); % random distribution
+        if and((d_trajectory > min_length),x<bubbles{jj}.poiseuille)
             break;
         end
     end
@@ -429,7 +500,7 @@ for jj = 1:n_bubbles
 end
 beep2
 %% Plot all trajectories
-if or(display==1,display==2)
+if or(or(display==1,display==2),display==4)
     disp('Plotting Trajectories...');
     figure(6)
     clf
@@ -439,6 +510,7 @@ if or(display==1,display==2)
         hold on
         plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),bubbles{jj}.XYZ_laminar(:,2),bubbles{jj}.XYZ_laminar(:,3),'LineWidth',1,'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
         plot1.Color(4) = 0.3;
+%         drawnow
     end
     titre1 = 'Laminar flow simulation with';
     titre2 = num2str(n_bubbles);
@@ -467,15 +539,12 @@ for ii = 1:n_bubbles % Sorting as a function of r
 end
 % flow_array = flow_array/max(flow_array);
 [flow_array_sorted,flow_array_idx] = sort(flow_array,1,'descend');
-bubbles_tmp = cell(n_bubbles,1);
-for ii = 1:n_bubbles
-    bubbles_tmp{ii} = bubbles{flow_array_idx(ii)};
-end
-bubbles = bubbles_tmp;
-clear bubbles_tmp
-save([save_path 'bubbles_',save_file_name,'_.mat'],'bubbles','samp_freq',...
-    'n_bubbles','n_bubbles_steady_state','t_steady_state','bubble_size',...
-    'pulsatility','filename','-v7.3');
+% bubbles_tmp = cell(n_bubbles,1);
+% for ii = 1:n_bubbles
+%     bubbles_tmp{ii} = bubbles{flow_array_idx(ii)};
+% end
+% bubbles = bubbles_tmp;
+% clear bubbles_tmp
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
 d_mean_sample_log = log(2*r_mean_sample);
 N_mean_sample_log = 3.7*d_mean_sample_log -8.2;
@@ -484,10 +553,35 @@ rand_pdf = floor(randpdf(N_mean_sample,1:n_bubbles,[n_bubbles,1]))+1;
 rand_pdf_times_N = rand_pdf.*r_mean_sample';
 rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                     .*max(rand_pdf))+1; % Contains indexes of the bubbles 
-                                        % to take in the SS calculation
-if display == 2
-    figure;clf;
-    hist(RADII,25);title('RADII');xlabel('r (\mum)');ylabel('N');
+%%                                      % to take in the SS calculation
+%% Stats
+max_d = ceil(max(RADII*2));
+min_d = floor(min(RADII*2));
+[N_hist,DIAMETER_hist] = hist(RADII*2,(max_d-min_d)/2);
+not_zeros_in_N = not(N_hist==0);
+N_hist = N_hist(not_zeros_in_N);
+DIAMETER_hist = DIAMETER_hist(not_zeros_in_N);
+if display == 1
+    figure(94);clf;
+    hist(RADII*2,10);title('DIAMETERS');
+    xlabel('d (\mum)');ylabel('N');
+end
+x = log(DIAMETER_hist');
+y = log(N_hist');
+X = [ones(length(x),1) x];
+b = X\y;
+yCalc2 = X*b;
+yHingot = 3.7*x-8.2;
+if display == 1
+    figure(95);clf;
+    scatter(log(DIAMETER_hist),log(N_hist));hold on;plot(x,yCalc2,'--');
+    plot(x,yHingot,'*-')
+    xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs d')
+    legend_title = ['y = ' num2str(b(2)) 'x + ' num2str(b(1))];
+    legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
+end
+%%
+if display == 3
     figure(96);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
@@ -505,6 +599,14 @@ if display == 2
     subplot(1,2,2);
     plot(flow_array_sorted)
 end
+%% Save
+save_file_name = [file_name, '_', num2str(n_bubbles), '_bubbles_', ...
+    num2str(n_bubbles_steady_state),'_bubbles_per_frame_', num2str(samp_freq),...
+    '_Hz_', num2str(t_steady_state*1000), '_ms_'];
+save([save_path 'bubbles_',save_file_name,'.mat'],'bubbles','samp_freq',...
+    'n_bubbles','n_bubbles_steady_state','t_steady_state','bubble_size',...
+    'pulsatility','slope','intercept','b','v_propagation_manual',...
+    'filename','-v7.3');
 %% Steady state flow calculation
 clear frames frames_velocities
 dt = bubbles{1}.dt;
@@ -523,7 +625,7 @@ for jj = 1:length(bubbles)
         max_frames = size(bubbles{jj}.XYZ_laminar,1);
     end
 end
-if n_frames > max_frames
+if 0%n_frames > max_frames
     disp(['The maximum simulation time given the data is : ', num2str(max_frames*bubbles{1}.dt), ' s']);
 else
     frames = NaN(n_bubbles_steady_state,n_frames);
@@ -596,6 +698,9 @@ else
         't_steady_state','bubble_size','pulsatility','filename','-v7.3');
 end
 beep2
+disp('Successfully saved frames...')
+fprintf('Theoretically, you could have simulated a maximum of  %3.1f s\n',...
+    (n_bubbles/bubble_count*t_steady_state));
 %% Plot steady state flow
 if or(display==1,display==2)
     n_bubbles_steady_state = size(frames,1);
@@ -627,7 +732,7 @@ if display == 2
     % Velocities calculation
     max_d = 0;
     dt = bubbles{1}.dt;
-    n_bubbles = size(bubbles,1);
+    n_bubbles = 3000;%size(bubbles,1);
     for jj = 1:n_bubbles
         if(~isempty(bubbles{jj}.XYZ_laminar))
             if(size(bubbles{jj}.XYZ_laminar,1)>=2)
