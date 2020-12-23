@@ -10,15 +10,15 @@ mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 %% Temp folder
 mkdir(root_dir,[save_dir '\temp']);
-delete([save_path '\temp\*'])
 %% Visualize
 display = 0; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
 samp_freq = 1000; %(Hz)
 n_bubbles = 5000; % Number of bubbles trajectories generated
+bb_per_paquet = 5000; % n_trajectories per paquet (for storage)
 n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
  % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 0.2; % Desired simulation time (s)
+t_steady_state = 0.6; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
 file_name = 'test';
@@ -280,7 +280,6 @@ end
 % N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 %% Simuation
-clear bubbles
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 % bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
@@ -292,227 +291,237 @@ v_propagation = NaN;
 v_propagation_manual = 5000; % (um/s) Velocity of the pulse. To be determined
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
-for jj = 1:n_bubbles
-    tic
-    bubble = cell(1,1);
-    %bubbles{jj}.poiseuille = 2;
-    %while(bubbles{jj}.poiseuille>1);bubbles{jj}.poiseuille = abs(std*randn(1));end % normal distribution of mean 0 and std = 0.5
-    bubble{1}.poiseuille_original = v_poiseuille(floor(length(v_poiseuille)*rand)+1);
-    bubble{1}.min_poiseuille_reached = 0;
-    bubble{1}.dt = dt;
-    if(bubble{1}.poiseuille_original < min_poiseuille) % if poiseuille ratio is lower than threshold
-        bubble{1}.poiseuille = min_poiseuille;
-        bubble{1}.min_poiseuille_reached = 1;
-    else
-        bubble{1}.poiseuille = bubble{1}.poiseuille_original;
-    end
-    %inter_distance = v*dt*(1-bubble{1}.poiseuille); %(um) node_distance with compensation for radial position from center
-    clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
-    %fprintf('2\n');
-    while 1 % create new trajectory while too short
-        random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
-        start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
-        [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
-        edges = table2array(SP.Edges);
-        nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
-        trajectory = pos(nodes,:); % Nodes positions attribution
-        d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
-        x = rand(1); % random distribution
-        if and((d_trajectory > min_length),x<bubble{1}.poiseuille)
-            break;
+n_paquets = n_bubbles/bb_per_paquet;
+for pqt = 1:n_paquets % each paquet of trajectories
+    clear bubbles_pqt % bubbles paquet
+    bubbles_pqt = cell(bb_per_paquet,1);
+    for trj = 1:bb_per_paquet % each trajectory
+        tic
+        %bubbles{jj}.poiseuille = 2;
+        %while(bubbles{jj}.poiseuille>1);bubbles{jj}.poiseuille = abs(std*randn(1));end % normal distribution of mean 0 and std = 0.5
+        bubbles_pqt{trj}.poiseuille_original = v_poiseuille(floor(length(v_poiseuille)*rand)+1);
+        bubbles_pqt{trj}.min_poiseuille_reached = 0;
+        bubbles_pqt{trj}.dt = dt;
+        if(bubbles_pqt{trj}.poiseuille_original < min_poiseuille) % if poiseuille ratio is lower than threshold
+            bubbles_pqt{trj}.poiseuille = min_poiseuille;
+            bubbles_pqt{trj}.min_poiseuille_reached = 1;
+        else
+            bubbles_pqt{trj}.poiseuille = bubbles_pqt{trj}.poiseuille_original;
         end
-    end
-    if(1)
-        bubble{1}.d_trajectory = d_trajectory;
-        distances = sqrt(sum(diff(trajectory,[],1).^2,2)); % Distances between each original node of the generated trajectory
-        distances_cum = cumsum(distances); % Cumulated distances
-        xyz = trajectory';
-        spline_f = cscvn(xyz); % Creation of the cubic splines
-        bubble{1}.coefficients = spline_f.coefs; % Getting the coefficients
-        start = 0; % (um) % Starting distance from first node
-        %%% Vary the distance according to the closest node's radius
-        dd = 0;
-        new_distances(1,1) = start;
-        k = 2;
-        bubble_can_go_through = 1;
-        while((d_trajectory-new_distances(k-1,1) > max(v_sample_um)*dt)&&bubble_can_go_through)
-            previous_nodes_idx = find(distances_cum <= dd); % Finding the nodes that are before the point to get the closest but before node
-            if(~isempty(previous_nodes_idx)) % if the starting distance is greater than the first node
-                previous_node_idxes(k-1,1) = previous_nodes_idx(end)+1; % This is the previous node's index. 
-                distances_point_previous(k-1,1) = dd - distances_cum(previous_node_idxes(k-1,1)-1); % Calculating the distance from previous node to know which of the next and previous are closest
-                distances_next_previous(k-1,1) = distances_cum(previous_node_idxes(k-1,1)) - distances_cum(previous_node_idxes(k-1,1)-1);
-                if((distances_point_previous(k-1)/distances_next_previous(k-1))<=0.5) % if previous point is closest
-                    if(dd<d_trajectory) % if length not exceeding path length
-                        closest_nodes(k-1,1) = previous_node_idxes(k-1,1);
-                        if(pulsatility==1)
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                            if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
-                                v_propagation = v_propagation_manual;%v/debug_propagation_factor;
-                            end
-                            wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
-                            bubble{1}.wave_delays(k-1) = wave_delay;
-                            wave_index = k+period/dt-wave_delay;%+(period/dt)-floor((dd/d_trajectory)*(period/dt));
-                            bubble{1}.wave_indexes(k-1) = wave_index;
-                            dd = dd+dt*v*ecg_normalized(wave_index);
-                        else
-                            dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                        end
-                        new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1)); % This is the important array which contains the distances between the new nodes
-                        k = k+1;
-                        if(r(nodes(closest_nodes(k-2))) - padding_bubble)<=0
-                            bubble_can_go_through=0;
-                        end
-                    end
-                else % if next node is closest
-                    if(dd<d_trajectory) % if length not exceeding path length
-                        closest_nodes(k-1,1) = previous_node_idxes(k-1,1)+1;
-                        if(pulsatility==1)
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                            if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
-                                v_propagation = v_propagation_manual;%v/debug_propagation_factor;
-                            end
-                            wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
-                            bubble{1}.wave_delays(k-1) = wave_delay;
-                            wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
-                            bubble{1}.wave_indexes(k-1) = wave_index;
-                            dd = dd+dt*v*ecg_normalized(wave_index);
-                        else
-                            dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                        end
-                        new_distances(k,1) = dd;%dd + inter_distance*r_norm(closest_nodes(k-1));
-                        k = k+1;
-                        if(r(nodes(closest_nodes(k-2))) - padding_bubble)<=0
-                            bubble_can_go_through=0;
-                        end
-                    end
-                end
-            else % the starting distance is less than the first node
-                previous_node_idxes(k-1,1) = 1;
-                next_node_idx = previous_node_idxes(k-1,1) + 1;
-                distances_point_previous(k-1,1) = dd;
-                distances_next_previous(k-1,1) = distances_cum(previous_node_idxes(k-1,1));
-                if((distances_point_previous(k-1)/distances_next_previous(k-1))<=0.5) % if previous point is closest
-                    if(dd<d_trajectory) % if length not exceeding path length
-                        closest_nodes(k-1,1) = previous_node_idxes(k-1,1);
-                        if(pulsatility==1)
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                            if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
-                                v_propagation = v_propagation_manual;%v/debug_propagation_factor;
-                            end
-                            wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
-                            wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
-                            bubble{1}.wave_delays(k-1) = wave_delay;
-                            bubble{1}.wave_indexes(k-1) = wave_index;
-                            dd = dd+dt*v*ecg_normalized(wave_index);
-                        else
-                            dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                        end
-                        new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
-                        k = k+1;
-                    end
-                else
-                    if(dd<d_trajectory) % if length not exceeding path length
-                        closest_nodes(k-1,1) = previous_node_idxes(k-1,1)+1;
-                        if(pulsatility==1)
-                            if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
-                                v_propagation = v_propagation_manual;%v/debug_propagation_factor;
-                            end
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                            wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
-                            wave_index = k+period/dt-wave_delay;%+ (period/dt)-floor((dd/d_trajectory)*(period/dt)); % The propagation wave
-                            bubble{1}.wave_delays(k-1) = wave_delay;
-                            bubble{1}.wave_indexes(k-1) = wave_index;
-                            dd = dd+dt*v*ecg_normalized(wave_index);
-                        else
-                            dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubble{1}.poiseuille);
-                        end
-                        new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
-                        k = k+1;
-                    end
-                end
+        %inter_distance = v*dt*(1-bubbles_pqt{trj}.poiseuille); %(um) node_distance with compensation for radial position from center
+        clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
+        %fprintf('2\n');
+        while 1 % create new trajectory while too short
+            random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
+            start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+            [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
+            edges = table2array(SP.Edges);
+            nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
+            trajectory = pos(nodes,:); % Nodes positions attribution
+            d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
+            x = rand(1); % random distribution
+            if and((d_trajectory > min_length),x<bubbles_pqt{trj}.poiseuille)
+                break;
             end
-            dd = new_distances(k-1,1);
         end
-        bubble{1}.new_distances = new_distances;
-        bubble{1}.closest_nodes = nodes(closest_nodes); % Saving the closest nodes indexes
-        %%%%% Calculation of the new positions using the cubic splines
-        %%%%% coefficients
-        L = length(new_distances)-1;
-        d = new_distances;
-        bubble{1}.delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
-        % point calculation using spline
-        bubble{1}.pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
-        ax = bubble{1}.coefficients(bubble{1}.pp,1);
-        bx = bubble{1}.coefficients(bubble{1}.pp,2);
-        cx = bubble{1}.coefficients(bubble{1}.pp,3);
-        dx = bubble{1}.coefficients(bubble{1}.pp,4);
-        X = ax.*(bubble{1}.delta.^3) + bx.*(bubble{1}.delta.^2) +...
-            cx.*(bubble{1}.delta) + dx; % X component
-        ay = bubble{1}.coefficients(bubble{1}.pp+1,1);
-        by = bubble{1}.coefficients(bubble{1}.pp+1,2);
-        cy = bubble{1}.coefficients(bubble{1}.pp+1,3);
-        dy = bubble{1}.coefficients(bubble{1}.pp+1,4);
-        Y = ay.*(bubble{1}.delta.^3) + by.*(bubble{1}.delta.^2) +...
-            cy.*(bubble{1}.delta) + dy; % Y component
-        az = bubble{1}.coefficients(bubble{1}.pp+2,1);
-        bz = bubble{1}.coefficients(bubble{1}.pp+2,2);
-        cz = bubble{1}.coefficients(bubble{1}.pp+2,3);
-        dz = bubble{1}.coefficients(bubble{1}.pp+2,4);
-        Z = az.*(bubble{1}.delta.^3) + bz.*(bubble{1}.delta.^2) +...
-            cz.*(bubble{1}.delta) + dz;  % Z component
-        bubble{1}.XYZ_centerLine = horzcat(X,Y,Z);
+        if(1)
+            bubbles_pqt{trj}.d_trajectory = d_trajectory;
+            distances = sqrt(sum(diff(trajectory,[],1).^2,2)); % Distances between each original node of the generated trajectory
+            distances_cum = cumsum(distances); % Cumulated distances
+            xyz = trajectory';
+            spline_f = cscvn(xyz); % Creation of the cubic splines
+            bubbles_pqt{trj}.coefficients = spline_f.coefs; % Getting the coefficients
+            start = 0; % (um) % Starting distance from first node
+            %%% Vary the distance according to the closest node's radius
+            dd = 0;
+            new_distances(1,1) = start;
+            k = 2;
+            bubble_can_go_through = 1;
+            while((d_trajectory-new_distances(k-1,1) > max(v_sample_um)*dt)&&bubble_can_go_through)
+                previous_nodes_idx = find(distances_cum <= dd); % Finding the nodes that are before the point to get the closest but before node
+                if(~isempty(previous_nodes_idx)) % if the starting distance is greater than the first node
+                    previous_node_idxes(k-1,1) = previous_nodes_idx(end)+1; % This is the previous node's index. 
+                    distances_point_previous(k-1,1) = dd - distances_cum(previous_node_idxes(k-1,1)-1); % Calculating the distance from previous node to know which of the next and previous are closest
+                    distances_next_previous(k-1,1) = distances_cum(previous_node_idxes(k-1,1)) - distances_cum(previous_node_idxes(k-1,1)-1);
+                    if((distances_point_previous(k-1)/distances_next_previous(k-1))<=0.5) % if previous point is closest
+                        if(dd<d_trajectory) % if length not exceeding path length
+                            closest_nodes(k-1,1) = previous_node_idxes(k-1,1);
+                            if(pulsatility==1)
+                                v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                                if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
+                                    v_propagation = v_propagation_manual;%v/debug_propagation_factor;
+                                end
+                                wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
+                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
+                                wave_index = k+period/dt-wave_delay;%+(period/dt)-floor((dd/d_trajectory)*(period/dt));
+                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                dd = dd+dt*v*ecg_normalized(wave_index);
+                            else
+                                dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            end
+                            new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1)); % This is the important array which contains the distances between the new nodes
+                            k = k+1;
+                            if(r(nodes(closest_nodes(k-2))) - padding_bubble)<=0
+                                bubble_can_go_through=0;
+                            end
+                        end
+                    else % if next node is closest
+                        if(dd<d_trajectory) % if length not exceeding path length
+                            closest_nodes(k-1,1) = previous_node_idxes(k-1,1)+1;
+                            if(pulsatility==1)
+                                v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                                if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
+                                    v_propagation = v_propagation_manual;%v/debug_propagation_factor;
+                                end
+                                wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
+                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
+                                wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
+                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                dd = dd+dt*v*ecg_normalized(wave_index);
+                            else
+                                dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            end
+                            new_distances(k,1) = dd;%dd + inter_distance*r_norm(closest_nodes(k-1));
+                            k = k+1;
+                            if(r(nodes(closest_nodes(k-2))) - padding_bubble)<=0
+                                bubble_can_go_through=0;
+                            end
+                        end
+                    end
+                else % the starting distance is less than the first node
+                    previous_node_idxes(k-1,1) = 1;
+                    next_node_idx = previous_node_idxes(k-1,1) + 1;
+                    distances_point_previous(k-1,1) = dd;
+                    distances_next_previous(k-1,1) = distances_cum(previous_node_idxes(k-1,1));
+                    if((distances_point_previous(k-1)/distances_next_previous(k-1))<=0.5) % if previous point is closest
+                        if(dd<d_trajectory) % if length not exceeding path length
+                            closest_nodes(k-1,1) = previous_node_idxes(k-1,1);
+                            if(pulsatility==1)
+                                v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                                if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
+                                    v_propagation = v_propagation_manual;%v/debug_propagation_factor;
+                                end
+                                wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
+                                wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
+                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
+                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                dd = dd+dt*v*ecg_normalized(wave_index);
+                            else
+                                dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            end
+                            new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
+                            k = k+1;
+                        end
+                    else
+                        if(dd<d_trajectory) % if length not exceeding path length
+                            closest_nodes(k-1,1) = previous_node_idxes(k-1,1)+1;
+                            if(pulsatility==1)
+                                if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
+                                    v_propagation = v_propagation_manual;%v/debug_propagation_factor;
+                                end
+                                v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                                wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
+                                wave_index = k+period/dt-wave_delay;%+ (period/dt)-floor((dd/d_trajectory)*(period/dt)); % The propagation wave
+                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
+                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                dd = dd+dt*v*ecg_normalized(wave_index);
+                            else
+                                dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            end
+                            new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
+                            k = k+1;
+                        end
+                    end
+                end
+                dd = new_distances(k-1,1);
+            end
+            bubbles_pqt{trj}.new_distances = new_distances;
+            bubbles_pqt{trj}.closest_nodes = nodes(closest_nodes); % Saving the closest nodes indexes
+            %%%%% Calculation of the new positions using the cubic splines
+            %%%%% coefficients
+            L = length(new_distances)-1;
+            d = new_distances;
+            bubbles_pqt{trj}.delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
+            % point calculation using spline
+            bubbles_pqt{trj}.pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
+            ax = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,1);
+            bx = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,2);
+            cx = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,3);
+            dx = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,4);
+            X = ax.*(bubbles_pqt{trj}.delta.^3) + bx.*(bubbles_pqt{trj}.delta.^2) +...
+                cx.*(bubbles_pqt{trj}.delta) + dx; % X component
+            ay = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,1);
+            by = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,2);
+            cy = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,3);
+            dy = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,4);
+            Y = ay.*(bubbles_pqt{trj}.delta.^3) + by.*(bubbles_pqt{trj}.delta.^2) +...
+                cy.*(bubbles_pqt{trj}.delta) + dy; % Y component
+            az = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,1);
+            bz = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,2);
+            cz = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,3);
+            dz = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,4);
+            Z = az.*(bubbles_pqt{trj}.delta.^3) + bz.*(bubbles_pqt{trj}.delta.^2) +...
+                cz.*(bubbles_pqt{trj}.delta) + dz;  % Z component
+            bubbles_pqt{trj}.XYZ_centerLine = horzcat(X,Y,Z);
+        end
+        %%% Laminar flow calculation
+        clear xyz parallel perpendicular perpendicular2 radii
+        xyz = bubbles_pqt{trj}.XYZ_centerLine;
+        parallel = [xyz(2:end,1)-xyz(1:end-1,1) xyz(2:end,2)-xyz(1:end-1,2) xyz(2:end,3)-xyz(1:end-1,3)]; % vectors parallel to the nodes
+        parallel_smooth = smooth(parallel,0.02);
+        parallel_smooth = reshape(parallel_smooth,[size(parallel,1) 3]);
+        parallel = parallel_smooth;
+        perpendicular = zeros(size(parallel,1),3);
+        perpendicular2 = zeros(size(parallel,1),3);
+        for i = 1:size(parallel,1) % Iterate because vectorised function that gives orthogonal vectors of arrays not found
+            perpendiculars = null(parallel(i,:)); % The null() function returns 2 orthogonal vectors to the set of 2 points
+            perpendicular(i,:) = perpendiculars(:,1)'; %perpendicular vector 1
+            perpendicular2(i,:) = perpendiculars(:,2)'; %perpendicular vector 2
+        end
+        %%% linear combination
+        bubbles_pqt{trj}.random_combination1 = rand(1);
+        bubbles_pqt{trj}.random_combination2 = rand(1);
+        lin_combination = (-1+2*bubbles_pqt{trj}.random_combination1)*perpendicular+...
+                          (-1+2*bubbles_pqt{trj}.random_combination2)*perpendicular2;
+        %%% Normalize the lin_combination vector to obtain a circular
+        %%% distribution rather than a rectangular one
+        lin_combination = lin_combination./norm(max(lin_combination));
+        %%% Compensate for Poiseuille
+        lin_combination = lin_combination.*(sqrt((1-bubbles_pqt{trj}.poiseuille_original))); % compensation of the radial component(lin_combination) by the poiseuille value
+    %     lin_combination_smooth = smooth(lin_combination,'loess');
+    %     lin_combination_smooth = reshape(lin_combination_smooth,[size(lin_combination,1) 3]);
+    %     lin_combination = lin_combination_smooth;
+        bubbles_pqt{trj}.radii = abs(r(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
+        %compensation_radii = radii(2:end,1)-radii(1:end-1,1); % Difference in radius between each node
+        %compensation_radii = (radii(3:end,1)-radii(1:end-2,1))/2; % Centered difference in radius between each node with error of order 2
+        %compensation_radii = smooth(compensation_radii,0.1); % smoothing the derivative curve
+        %compensation_rayon_cumul = cumsum(compensation_radii); % Cumulative difference of the radii between each node
+        %laminar_xyz = zeros(length(xyz),3);
+        %laminar_xyz(1,:) = xyz(1,:)+ lin_combination(1,:).*radii(1); % Point_coordinates + perpendicular_component * radius
+        laminar_xyz = xyz(1:end-1,:) + lin_combination.*bubbles_pqt{trj}.radii(1:end-1);
+        bubbles_pqt{trj}.XYZ_laminar = laminar_xyz;
+        bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
+        %vertices{jj} = laminar_xyz;
+        tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
     end
-    %%% Laminar flow calculation
-    clear xyz parallel perpendicular perpendicular2 radii
-    xyz = bubble{1}.XYZ_centerLine;
-    parallel = [xyz(2:end,1)-xyz(1:end-1,1) xyz(2:end,2)-xyz(1:end-1,2) xyz(2:end,3)-xyz(1:end-1,3)]; % vectors parallel to the nodes
-    parallel_smooth = smooth(parallel,0.02);
-    parallel_smooth = reshape(parallel_smooth,[size(parallel,1) 3]);
-    parallel = parallel_smooth;
-    perpendicular = zeros(size(parallel,1),3);
-    perpendicular2 = zeros(size(parallel,1),3);
-    for i = 1:size(parallel,1) % Iterate because vectorised function that gives orthogonal vectors of arrays not found
-        perpendiculars = null(parallel(i,:)); % The null() function returns 2 orthogonal vectors to the set of 2 points
-        perpendicular(i,:) = perpendiculars(:,1)'; %perpendicular vector 1
-        perpendicular2(i,:) = perpendiculars(:,2)'; %perpendicular vector 2
-    end
-    %%% linear combination
-    bubble{1}.random_combination1 = rand(1);
-    bubble{1}.random_combination2 = rand(1);
-    lin_combination = (-1+2*bubble{1}.random_combination1)*perpendicular+...
-                      (-1+2*bubble{1}.random_combination2)*perpendicular2;
-    %%% Normalize the lin_combination vector to obtain a circular
-    %%% distribution rather than a rectangular one
-    lin_combination = lin_combination./norm(max(lin_combination));
-    %%% Compensate for Poiseuille
-    lin_combination = lin_combination.*(sqrt((1-bubble{1}.poiseuille_original))); % compensation of the radial component(lin_combination) by the poiseuille value
-%     lin_combination_smooth = smooth(lin_combination,'loess');
-%     lin_combination_smooth = reshape(lin_combination_smooth,[size(lin_combination,1) 3]);
-%     lin_combination = lin_combination_smooth;
-    bubble{1}.radii = abs(r(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
-    %compensation_radii = radii(2:end,1)-radii(1:end-1,1); % Difference in radius between each node
-    %compensation_radii = (radii(3:end,1)-radii(1:end-2,1))/2; % Centered difference in radius between each node with error of order 2
-    %compensation_radii = smooth(compensation_radii,0.1); % smoothing the derivative curve
-    %compensation_rayon_cumul = cumsum(compensation_radii); % Cumulative difference of the radii between each node
-    %laminar_xyz = zeros(length(xyz),3);
-    %laminar_xyz(1,:) = xyz(1,:)+ lin_combination(1,:).*radii(1); % Point_coordinates + perpendicular_component * radius
-    laminar_xyz = xyz(1:end-1,:) + lin_combination.*bubble{1}.radii(1:end-1);
-    bubble{1}.XYZ_laminar = laminar_xyz;
-    bubble{1}.ID = jj;
-    %vertices{jj} = laminar_xyz;
-    tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, jj, n_bubbles); % Show progress to the user
-    %% Save bubble
-    save([save_path 'temp\' 'bubble_',file_name,'_',num2str(jj),'_.mat'],'bubble','-v6');
-    clear bubbles
+    %% Save paquet of bubbles
+    tic
+    save([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'],'bubbles_pqt','-v6');
+    clear bubbles_pqt
+    toc
 end
 beep2
 %% Gather all Bubbles
-clear bubble
+clear bubbles
 bubbles = cell(n_bubbles,1); % Initialization
-for idx = 1:n_bubbles
-    load([save_path 'temp\' 'bubble_',file_name,'_',num2str(idx),'_.mat'])
-    bubbles{idx} = bubble{1};
+for pqt = 1:n_paquets
+    load([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'])
+    for trj = 1:bb_per_paquet
+        bubbles{trj+(pqt-1)*bb_per_paquet} = bubbles_pqt{trj};
+    end
 end
+clear bubbles_pqt
+delete([save_path 'temp\' 'bubbles_pqt_',file_name '*'])
 %% Plot all trajectories
 if or(or(display==1,display==2),display==4)
     disp('Plotting Trajectories...');
