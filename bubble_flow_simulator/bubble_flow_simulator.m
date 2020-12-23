@@ -505,10 +505,8 @@ for pqt = 1:n_paquets % each paquet of trajectories
         tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
     end
     %% Save paquet of bubbles
-    tic
     save([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'],'bubbles_pqt','-v6');
     clear bubbles_pqt
-    toc
 end
 beep2
 %% Gather all Bubbles
@@ -623,6 +621,7 @@ if display == 3
     plot(flow_array_sorted)
 end
 %% Save
+disp('Saving bubbles...')
 save_file_name = [file_name, '_', num2str(n_bubbles), '_bubbles_', ...
     num2str(n_bubbles_steady_state),'_bubbles_per_frame_', num2str(samp_freq),...
     '_Hz_', num2str(t_steady_state*1000), '_ms_'];
