@@ -550,12 +550,12 @@ drawnow
 disp('Sorting trajectories...');
 clear flow_array
 flow_array = [];
-RADII = [];
+stats.RADII = [];
 radii_idx = 1;
 for ii = 1:n_bubbles % Sorting as a function of r
     flow_array(ii,1) = mean(bubbles{ii}.radii);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
                      %* bubbles{ii}.poiseuille;
-    RADII(radii_idx:radii_idx+numel(bubbles{ii}.radii)-1) = bubbles{ii}.radii;
+    stats.RADII(radii_idx:radii_idx+numel(bubbles{ii}.radii)-1) = bubbles{ii}.radii;
     radii_idx = radii_idx + numel(bubbles{ii}.radii);
 end
 % flow_array = flow_array/max(flow_array);
@@ -576,27 +576,27 @@ rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                     .*max(rand_pdf))+1; % Contains indexes of the bubbles 
 %%                                      % to take in the SS calculation
 %% Stats
-max_d = ceil(max(RADII*2));
-min_d = floor(min(RADII*2));
-[N_hist,DIAMETER_hist] = hist(RADII*2,(max_d-min_d)/2);
-not_zeros_in_N = not(N_hist==0);
-N_hist = N_hist(not_zeros_in_N);
-DIAMETER_hist = DIAMETER_hist(not_zeros_in_N);
+stats.max_d = ceil(max(stats.RADII*2));
+stats.min_d = floor(min(stats.RADII*2));
+[stats.N_hist,stats.DIAMETER_hist] = hist(stats.RADII*2,(stats.max_d-stats.min_d)/2);
+stats.not_zeros_in_N = not(stats.N_hist==0);
+stats.N_hist = stats.N_hist(stats.not_zeros_in_N);
+stats.DIAMETER_hist = stats.DIAMETER_hist(stats.not_zeros_in_N);
 if display == 1
     figure(94);clf;
-    hist(RADII*2,10);title('DIAMETERS');
+    hist(stats.RADII*2,10);title('DIAMETERS');
     xlabel('d (\mum)');ylabel('N');
 end
-x = log(DIAMETER_hist');
-y = log(N_hist');
-X = [ones(length(x),1) x];
-b = X\y;
-yCalc2 = X*b;
-yHingot = 3.7*x-8.2;
+stats.x = log(stats.DIAMETER_hist');
+stats.y = log(stats.N_hist');
+stats.X = [ones(length(stats.x),1) stats.x];
+stats.b = stats.X\stats.y;
+stats.yCalc2 = stats.X*stats.b;
+stats.yHingot = 3.7*stats.x-8.2;
 if display == 1
     figure(95);clf;
-    scatter(log(DIAMETER_hist),log(N_hist));hold on;plot(x,yCalc2,'--');
-    plot(x,yHingot,'*-')
+    scatter(log(stats.DIAMETER_hist),log(stats.N_hist));hold on;plot(stats.x,stats.yCalc2,'--');
+    plot(stats.x,stats.yHingot,'*-')
     xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs d')
     legend_title = ['y = ' num2str(b(2)) 'x + ' num2str(b(1))];
     legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
@@ -627,7 +627,7 @@ save_file_name = [file_name, '_', num2str(n_bubbles), '_bubbles_', ...
     '_Hz_', num2str(t_steady_state*1000), '_ms_'];
 save([save_path 'bubbles_',save_file_name,'.mat'],'bubbles','samp_freq',...
     'n_bubbles','n_bubbles_steady_state','t_steady_state','bubble_size',...
-    'pulsatility','slope','intercept','b','v_propagation_manual',...
+    'pulsatility','slope','intercept','stats','v_propagation_manual',...
     'filename','-v7.3');
 %% Steady state flow calculation
 clear frames frames_velocities
@@ -717,7 +717,8 @@ else
     frames_param.n_frames = n_frames;
     save([save_path 'frames_',save_file_name,'.mat'],'frames_label','frames',...
         'frames_velocities','samp_freq','n_bubbles','n_bubbles_steady_state',...
-        't_steady_state','bubble_size','pulsatility','filename','-v7.3');
+        't_steady_state','bubble_size','pulsatility','filename',...
+        'stats','-v7.3');
 end
 beep2
 disp('Successfully saved frames...')
