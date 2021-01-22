@@ -13,6 +13,7 @@ mkdir(root_dir,[save_dir '\temp']);
 %% Visualize
 display = 0; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
+disp('Running...')
 samp_freq = 1000; %(Hz)
 n_bubbles = 5000; % Number of bubbles trajectories generated
 bb_per_paquet = 5000; % n_trajectories per paquet (for storage)
@@ -108,11 +109,11 @@ mean_radius = mean(r); % um
 total_vessel_volume = length_volume_calc*pi()*mean_radius.^2; % um^3 % This is the cumulative trajectories volume! Not network volume
 disp(['Total vasculature volume = ' num2str(total_vessel_volume*1E-9) ' mm^3']);
 whole_volume = (max(pos(:,1))-min(pos(:,1)))*(max(pos(:,2))-min(pos(:,2)))*(max(pos(:,3))-min(pos(:,3)));
-disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
+% disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
 vessel_volume_mL = total_vessel_volume*1E-9/1000;
 C_MB = 2E5; % Concentration of MicroBubbles in the bloodstream, Hingot et al, 2019
 n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in the studied vessels
-disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
+% disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
 %% Extremity points visualization (Computationally heavy)
 if display == 3
     disp('Extremity points visualization')
@@ -189,6 +190,9 @@ freq = BPM/60;
 period = 1/freq;
 dt = 1/samp_freq;
 t_f = 100;
+if t_steady_state > t_f
+    t_f = t_steady_state;
+end
 x = 0:dt:t_f-dt;
 ecg_raw = ecg(BPM,dt,t_f);
 ecg_filtered = ecg_raw-min(ecg_raw);
