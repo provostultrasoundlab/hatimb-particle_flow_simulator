@@ -13,6 +13,7 @@ mkdir(root_dir,[save_dir '\temp']);
 %% Visualize
 display = 0; % 0: No display, 1: Minimal display, 2: All displays
 %% Essential Variables
+disp('Running...')
 samp_freq = 1000; %(Hz)
 n_bubbles = 5000; % Number of bubbles trajectories generated
 bb_per_paquet = 5000; % n_trajectories per paquet (for storage)
@@ -108,11 +109,11 @@ mean_radius = mean(r); % um
 total_vessel_volume = length_volume_calc*pi()*mean_radius.^2; % um^3 % This is the cumulative trajectories volume! Not network volume
 disp(['Total vasculature volume = ' num2str(total_vessel_volume*1E-9) ' mm^3']);
 whole_volume = (max(pos(:,1))-min(pos(:,1)))*(max(pos(:,2))-min(pos(:,2)))*(max(pos(:,3))-min(pos(:,3)));
-disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
+% disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
 vessel_volume_mL = total_vessel_volume*1E-9/1000;
 C_MB = 2E5; % Concentration of MicroBubbles in the bloodstream, Hingot et al, 2019
 n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in the studied vessels
-disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
+% disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
 %% Extremity points visualization (Computationally heavy)
 if display == 3
     disp('Extremity points visualization')
@@ -189,6 +190,9 @@ freq = BPM/60;
 period = 1/freq;
 dt = 1/samp_freq;
 t_f = 100;
+if t_steady_state > t_f
+    t_f = t_steady_state;
+end
 x = 0:dt:t_f-dt;
 ecg_raw = ecg(BPM,dt,t_f);
 ecg_filtered = ecg_raw-min(ecg_raw);
@@ -330,7 +334,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
             distances_cum = cumsum(distances); % Cumulated distances
             xyz = trajectory';
             spline_f = cscvn(xyz); % Creation of the cubic splines
-            bubbles_pqt{trj}.coefficients = spline_f.coefs; % Getting the coefficients
+            coefficients = spline_f.coefs; % Getting the coefficients
             start = 0; % (um) % Starting distance from first node
             %%% Vary the distance according to the closest node's radius
             dd = 0;
@@ -352,9 +356,9 @@ for pqt = 1:n_paquets % each paquet of trajectories
                                     v_propagation = v_propagation_manual;%v/debug_propagation_factor;
                                 end
                                 wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
-                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
+                                wave_delays(k-1) = wave_delay;
                                 wave_index = k+period/dt-wave_delay;%+(period/dt)-floor((dd/d_trajectory)*(period/dt));
-                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                wave_indexes(k-1) = wave_index;
                                 dd = dd+dt*v*ecg_normalized(wave_index);
                             else
                                 dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
@@ -374,9 +378,9 @@ for pqt = 1:n_paquets % each paquet of trajectories
                                     v_propagation = v_propagation_manual;%v/debug_propagation_factor;
                                 end
                                 wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
-                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
+                                wave_delays(k-1) = wave_delay;
                                 wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
-                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                wave_indexes(k-1) = wave_index;
                                 dd = dd+dt*v*ecg_normalized(wave_index);
                             else
                                 dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
@@ -403,8 +407,8 @@ for pqt = 1:n_paquets % each paquet of trajectories
                                 end
                                 wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
                                 wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
-                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
-                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                wave_delays(k-1) = wave_delay;
+                                wave_indexes(k-1) = wave_index;
                                 dd = dd+dt*v*ecg_normalized(wave_index);
                             else
                                 dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
@@ -422,8 +426,8 @@ for pqt = 1:n_paquets % each paquet of trajectories
                                 v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
                                 wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
                                 wave_index = k+period/dt-wave_delay;%+ (period/dt)-floor((dd/d_trajectory)*(period/dt)); % The propagation wave
-                                bubbles_pqt{trj}.wave_delays(k-1) = wave_delay;
-                                bubbles_pqt{trj}.wave_indexes(k-1) = wave_index;
+                                wave_delays(k-1) = wave_delay;
+                                wave_indexes(k-1) = wave_index;
                                 dd = dd+dt*v*ecg_normalized(wave_index);
                             else
                                 dd = dd+dt*v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
@@ -435,39 +439,40 @@ for pqt = 1:n_paquets % each paquet of trajectories
                 end
                 dd = new_distances(k-1,1);
             end
-            bubbles_pqt{trj}.new_distances = new_distances;
+%             new_distances = new_distances;
             bubbles_pqt{trj}.closest_nodes = nodes(closest_nodes); % Saving the closest nodes indexes
             %%%%% Calculation of the new positions using the cubic splines
             %%%%% coefficients
             L = length(new_distances)-1;
             d = new_distances;
-            bubbles_pqt{trj}.delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
+            delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
             % point calculation using spline
-            bubbles_pqt{trj}.pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
-            ax = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,1);
-            bx = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,2);
-            cx = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,3);
-            dx = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp,4);
-            X = ax.*(bubbles_pqt{trj}.delta.^3) + bx.*(bubbles_pqt{trj}.delta.^2) +...
-                cx.*(bubbles_pqt{trj}.delta) + dx; % X component
-            ay = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,1);
-            by = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,2);
-            cy = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,3);
-            dy = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+1,4);
-            Y = ay.*(bubbles_pqt{trj}.delta.^3) + by.*(bubbles_pqt{trj}.delta.^2) +...
-                cy.*(bubbles_pqt{trj}.delta) + dy; % Y component
-            az = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,1);
-            bz = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,2);
-            cz = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,3);
-            dz = bubbles_pqt{trj}.coefficients(bubbles_pqt{trj}.pp+2,4);
-            Z = az.*(bubbles_pqt{trj}.delta.^3) + bz.*(bubbles_pqt{trj}.delta.^2) +...
-                cz.*(bubbles_pqt{trj}.delta) + dz;  % Z component
-            bubbles_pqt{trj}.XYZ_centerLine = horzcat(X,Y,Z);
+            pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
+            ax = coefficients(pp,1);
+            bx = coefficients(pp,2);
+            cx = coefficients(pp,3);
+            dx = coefficients(pp,4);
+            X = ax.*(delta.^3) + bx.*(delta.^2) +...
+                cx.*(delta) + dx; % X component
+            ay = coefficients(pp+1,1);
+            by = coefficients(pp+1,2);
+            cy = coefficients(pp+1,3);
+            dy = coefficients(pp+1,4);
+            Y = ay.*(delta.^3) + by.*(delta.^2) +...
+                cy.*(delta) + dy; % Y component
+            az = coefficients(pp+2,1);
+            bz = coefficients(pp+2,2);
+            cz = coefficients(pp+2,3);
+            dz = coefficients(pp+2,4);
+            Z = az.*(delta.^3) + bz.*(delta.^2) +...
+                cz.*(delta) + dz;  % Z component
+            XYZ_centerLine = horzcat(X,Y,Z);
         end
         %%% Laminar flow calculation
         clear xyz parallel perpendicular perpendicular2 radii
-        xyz = bubbles_pqt{trj}.XYZ_centerLine;
-        parallel = [xyz(2:end,1)-xyz(1:end-1,1) xyz(2:end,2)-xyz(1:end-1,2) xyz(2:end,3)-xyz(1:end-1,3)]; % vectors parallel to the nodes
+        parallel = [XYZ_centerLine(2:end,1)-XYZ_centerLine(1:end-1,1) ...
+                    XYZ_centerLine(2:end,2)-XYZ_centerLine(1:end-1,2) ...
+                    XYZ_centerLine(2:end,3)-XYZ_centerLine(1:end-1,3)]; % vectors parallel to the nodes
         parallel_smooth = smooth(parallel,0.02);
         parallel_smooth = reshape(parallel_smooth,[size(parallel,1) 3]);
         parallel = parallel_smooth;
@@ -479,10 +484,10 @@ for pqt = 1:n_paquets % each paquet of trajectories
             perpendicular2(i,:) = perpendiculars(:,2)'; %perpendicular vector 2
         end
         %%% linear combination
-        bubbles_pqt{trj}.random_combination1 = rand(1);
-        bubbles_pqt{trj}.random_combination2 = rand(1);
-        lin_combination = (-1+2*bubbles_pqt{trj}.random_combination1)*perpendicular+...
-                          (-1+2*bubbles_pqt{trj}.random_combination2)*perpendicular2;
+        random_combination1 = rand(1);
+        random_combination2 = rand(1);
+        lin_combination = (-1+2*random_combination1)*perpendicular+...
+                          (-1+2*random_combination2)*perpendicular2;
         %%% Normalize the lin_combination vector to obtain a circular
         %%% distribution rather than a rectangular one
         lin_combination = lin_combination./norm(max(lin_combination));
@@ -498,7 +503,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
         %compensation_rayon_cumul = cumsum(compensation_radii); % Cumulative difference of the radii between each node
         %laminar_xyz = zeros(length(xyz),3);
         %laminar_xyz(1,:) = xyz(1,:)+ lin_combination(1,:).*radii(1); % Point_coordinates + perpendicular_component * radius
-        laminar_xyz = xyz(1:end-1,:) + lin_combination.*bubbles_pqt{trj}.radii(1:end-1);
+        laminar_xyz = XYZ_centerLine(1:end-1,:) + lin_combination.*bubbles_pqt{trj}.radii(1:end-1);
         bubbles_pqt{trj}.XYZ_laminar = laminar_xyz;
         bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
         %vertices{jj} = laminar_xyz;
