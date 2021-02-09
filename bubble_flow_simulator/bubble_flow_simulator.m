@@ -360,11 +360,11 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_index = k+period/dt-wave_delay;%+(period/dt)-floor((dd/d_trajectory)*(period/dt));
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         else
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd+dt*vf;
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1)); % This is the important array which contains the distances between the new nodes
@@ -386,11 +386,11 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_index = k+period/dt-wave_delay;% + (period/dt)-floor((dd/d_trajectory)*(period/dt));
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         else
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         end
                         new_distances(k,1) = dd;%dd + inter_distance*r_norm(closest_nodes(k-1));
@@ -418,12 +418,12 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_delays(k-1) = wave_delay;
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         else
                             
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
@@ -442,11 +442,11 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_delays(k-1) = wave_delay;
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         else
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
-                            vf_array(1,k) = vf; % save velocity
+                            vf_array(1,k-1) = vf; % save velocity
                             dd = dd + dt*vf;
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
@@ -663,8 +663,10 @@ k = 1;  % Bubble per frame counter (row in frames matrix)
 ii = 1; % Frame number times 5
 frm = 1; % frame number
 tot_toc = 0;
-frames_velocities(:,1) = zeros(n_bubbles_steady_state,1);
-velocities = zeros(n_bubbles_steady_state,n_frames); % bubbles velocities
+% frames_velocities(:,1) = zeros(n_bubbles_steady_state,1);
+frames_velocities = NaN(n_bubbles_steady_state,n_frames); % bubbles velocities
+frames_radii = zeros(n_bubbles_steady_state,n_frames);
+frames_poiseuille = zeros(n_bubbles_steady_state,n_frames);
 probability_fnct = (linspace(0,1,n_bubbles).^2);
 % Simulation time verification
 for jj = 1:length(bubbles)
@@ -684,12 +686,15 @@ else
         frames(pp,ii+1) = round(floor(random_index/(period/dt))*period/dt +1);    % idx
         if(size(bubbles{frames(pp,ii)}.XYZ_laminar,1)>=frames(pp,ii+1)) 
             frames(pp,ii+(2:4)) = bubbles{frames(pp,ii)}.XYZ_laminar(frames(pp,ii+1),:);
-            velocities(pp,1) = bubbles{frames(pp,ii)}.vf_array(frames(pp,ii+1));
+            frames_velocities(pp,1) = bubbles{frames(pp,ii)}.vf_array(frames(pp,ii+1));
+            frames_radii(pp,1) = bubbles{frames(pp,ii)}.radii(frames(pp,ii+1));
+            frames_poiseuille(pp,1) = bubbles{frames(pp,ii)}.poiseuille_original;
             pp = pp + 1;
         end
     end
     bubble_count = bubble_count + n_bubbles_steady_state;
     ii = ii + 5;
+    frm = frm + 1;
     while frm <= n_frames
         tic
         loop_counter = loop_counter+1;
@@ -698,10 +703,12 @@ else
                 frames(k,ii) = frames(k,ii-5);
                 frames(k,ii+1) = frames(k,ii-4)+1;
                 frames(k,ii+(2:4)) = bubbles{frames(k,ii)}.XYZ_laminar(frames(k,ii+1),:);
-                velocities(k,frm) = bubbles{frames(k,ii)}.vf_array(frames(k,ii+1));
-                xyz = [frames(k,(ii-5)+(2:4)); frames(k,[ii+(2:4)])];
-                frames_velocities(k,loop_counter+1) = sqrt(sum(diff(xyz,[],1).^2,2));
-                frames_velocities(k,loop_counter+1) = smooth(frames_velocities(k,loop_counter+1));
+                frames_velocities(k,frm) = bubbles{frames(k,ii)}.vf_array(frames(k,ii+1));
+                frames_radii(k,frm) = bubbles{frames(k,ii)}.radii(frames(k,ii+1));
+                frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille_original;
+%                 xyz = [frames(k,(ii-5)+(2:4)); frames(k,[ii+(2:4)])];
+%                 frames_velocities(k,loop_counter+1) = sqrt(sum(diff(xyz,[],1).^2,2));
+%                 frames_velocities(k,loop_counter+1) = smooth(frames_velocities(k,loop_counter+1));
             else
                 bubble_count = bubble_count + 1; % add new bubble
                 frames(k,ii) = rand_pdf_times_N(bubble_count);
@@ -727,7 +734,9 @@ else
                     frames(k,ii+1) = randi([1 size(bubbles{frames(k,ii)}.XYZ_laminar,1)],1,1); % generate random position of new bubble
                 end
                 frames(k,ii+(2:4)) = bubbles{frames(k,ii)}.XYZ_laminar(frames(k,ii+1),:);
-                frames_velocities(k,loop_counter) = 0;
+                frames_velocities(k,frm) = bubbles{frames(k,ii)}.vf_array(frames(k,ii+1));
+                frames_radii(k,frm) = bubbles{frames(k,ii)}.radii(frames(k,ii+1));
+                frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille_original;
             end
             k = k +1;
         end
@@ -736,7 +745,7 @@ else
         k = 1;
     tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, loop_counter, n_frames);
     end
-    max_velocity = max(max(frames_velocities));
+%     max_velocity = max(max(frames_velocities));
 %     frames_velocities = frames_velocities./max_velocity;
     frames_label = ['Bubble ID | Bubble index | X(um) | Y(um) | Z(um)'];
     frames_param.dt = dt;
@@ -746,7 +755,7 @@ else
     save([save_path 'frames_',save_file_name,'.mat'],'frames_label','frames',...
         'frames_velocities','samp_freq','n_bubbles','n_bubbles_steady_state',...
         't_steady_state','bubble_size','pulsatility','filename',...
-        'stats','velocities','-v7.3');
+        'stats','frames_radii','frames_poiseuille','-v7.3');
 end
 beep2
 disp('Successfully saved frames...')
