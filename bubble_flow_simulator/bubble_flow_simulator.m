@@ -261,7 +261,7 @@ radii_rounded = round(min_RADII_sorted);
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
 n_radii = numel(radii_unique);% number of differrent radii
-slope = 9; % TEMPORARY: Forcing a higher slope to get close to Hingot's
+slope = 9; % %%% Tweaking to a higher slope to get close to Hingot's
 intercept = 0;
 N_traject_log = slope*(log(radii*2))+intercept; %%% TEMPORARY FOR TESTING
 % N_traject_continuous_log = 3.7*(log(radii_unique_continuous*2)) -8.2;
@@ -621,7 +621,7 @@ if display == 1
     scatter(log(stats.DIAMETER_hist),log(stats.N_hist));hold on;plot(stats.x,stats.yCalc2,'--');
     plot(stats.x,stats.yHingot,'*-')
     xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs d')
-    legend_title = ['y = ' num2str(b(2)) 'x + ' num2str(b(1))];
+    legend_title = ['y = ' num2str(stats.b(2)) 'x + ' num2str(stats.b(1))];
     legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
 end
 %%
