@@ -290,7 +290,7 @@ tot_toc = 0; % For displaying progress to the user
 min_length = 100; % Minimum bubble trajectory length (um)
 min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
 DG = digraph(s,t,r_inverse); % Directed graph generation
-velocity_multiplicator = 1; % Multiplies velocities according to Hingot V et al, 2019
+velocity_multiplicator = 1; % Not in use for now
 v_propagation = NaN;
 v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
 std_hingot_velocity = 0;
@@ -329,6 +329,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
             end
         end
         vf_array = [];
+        ecg_array = [];
         bubbles_pqt{trj}.d_trajectory = d_trajectory;
         distances = sqrt(sum(diff(trajectory,[],1).^2,2)); % Distances between each original node of the generated trajectory
         distances_cum = cumsum(distances); % Cumulated distances
@@ -361,10 +362,12 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd+dt*vf;
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1)); % This is the important array which contains the distances between the new nodes
@@ -387,10 +390,12 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd + dt*vf;
                         end
                         new_distances(k,1) = dd;%dd + inter_distance*r_norm(closest_nodes(k-1));
@@ -419,11 +424,13 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
                             
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd + dt*vf;
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
@@ -443,10 +450,12 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             wave_indexes(k-1) = wave_index;
                             vf = v*ecg_normalized(wave_index);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
                             vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
+                            ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd + dt*vf;
                         end
                         new_distances(k,1) = dd;%v_sample(closest_nodes(k-1));%dd + inter_distance*r_norm(closest_nodes(k-1));
@@ -458,7 +467,9 @@ for pqt = 1:n_paquets % each paquet of trajectories
         end
 %             new_distances = new_distances;
         vf_array(1) = []; % removing first velocity (= 0)
+        ecg_array(1) = []; % removing first velocity (= 0)
         bubbles_pqt{trj}.vf_array = vf_array; % saving velocity
+        bubbles_pqt{trj}.ecg_array = ecg_array; % saving velocity
         bubbles_pqt{trj}.closest_nodes = nodes(closest_nodes); % Saving the closest nodes indexes
         %%%%% Calculation of the new positions using the cubic splines
         %%%%% coefficients
@@ -665,6 +676,7 @@ frm = 1; % frame number
 tot_toc = 0;
 % frames_velocities(:,1) = zeros(n_bubbles_steady_state,1);
 frames_velocities = NaN(n_bubbles_steady_state,n_frames); % bubbles velocities
+frames_ecg = NaN(n_bubbles_steady_state,n_frames); % bubbles ecg amplitude
 frames_radii = zeros(n_bubbles_steady_state,n_frames);
 frames_poiseuille = zeros(n_bubbles_steady_state,n_frames);
 probability_fnct = (linspace(0,1,n_bubbles).^2);
@@ -687,8 +699,9 @@ else
         if(size(bubbles{frames(pp,ii)}.XYZ_laminar,1)>=frames(pp,ii+1)) 
             frames(pp,ii+(2:4)) = bubbles{frames(pp,ii)}.XYZ_laminar(frames(pp,ii+1),:);
             frames_velocities(pp,1) = bubbles{frames(pp,ii)}.vf_array(frames(pp,ii+1));
+            frames_ecg(pp,1) = bubbles{frames(pp,ii)}.ecg_array(frames(pp,ii+1));
             frames_radii(pp,1) = bubbles{frames(pp,ii)}.radii(frames(pp,ii+1));
-            frames_poiseuille(pp,1) = bubbles{frames(pp,ii)}.poiseuille_original;
+            frames_poiseuille(pp,1) = bubbles{frames(pp,ii)}.poiseuille;
             pp = pp + 1;
         end
     end
@@ -704,8 +717,9 @@ else
                 frames(k,ii+1) = frames(k,ii-4)+1;
                 frames(k,ii+(2:4)) = bubbles{frames(k,ii)}.XYZ_laminar(frames(k,ii+1),:);
                 frames_velocities(k,frm) = bubbles{frames(k,ii)}.vf_array(frames(k,ii+1));
+                frames_ecg(k,frm) = bubbles{frames(k,ii)}.ecg_array(frames(k,ii+1));
                 frames_radii(k,frm) = bubbles{frames(k,ii)}.radii(frames(k,ii+1));
-                frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille_original;
+                frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille;
 %                 xyz = [frames(k,(ii-5)+(2:4)); frames(k,[ii+(2:4)])];
 %                 frames_velocities(k,loop_counter+1) = sqrt(sum(diff(xyz,[],1).^2,2));
 %                 frames_velocities(k,loop_counter+1) = smooth(frames_velocities(k,loop_counter+1));
@@ -735,8 +749,9 @@ else
                 end
                 frames(k,ii+(2:4)) = bubbles{frames(k,ii)}.XYZ_laminar(frames(k,ii+1),:);
                 frames_velocities(k,frm) = bubbles{frames(k,ii)}.vf_array(frames(k,ii+1));
+                frames_ecg(k,frm) = bubbles{frames(k,ii)}.ecg_array(frames(k,ii+1));
                 frames_radii(k,frm) = bubbles{frames(k,ii)}.radii(frames(k,ii+1));
-                frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille_original;
+                frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille;
             end
             k = k +1;
         end
@@ -755,7 +770,7 @@ else
     save([save_path 'frames_',save_file_name,'.mat'],'frames_label','frames',...
         'frames_velocities','samp_freq','n_bubbles','n_bubbles_steady_state',...
         't_steady_state','bubble_size','pulsatility','filename',...
-        'stats','frames_radii','frames_poiseuille','-v7.3');
+        'stats','frames_radii','frames_poiseuille','frames_ecg','-v7.3');
 end
 beep2
 disp('Successfully saved frames...')
