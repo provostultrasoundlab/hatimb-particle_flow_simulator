@@ -19,7 +19,7 @@ n_bubbles = 5000; % Number of bubbles trajectories generated
 bb_per_paquet = 5000; % n_trajectories per paquet (for storage)
 n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
  % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 0.6; % Desired simulation time (s)
+t_steady_state = 1; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
 file_name = 'test';
@@ -35,6 +35,12 @@ r = g(:,6);         % Nodes Radii
 r_norm = r./max(r); % Normalized Radii [0,1]
 r_inverse = 1./r;
 r_inverse_norm = 1./r_norm;
+%% Radii hist
+if display
+    figure(77);clf
+    hist(r);xlabel('radius');ylabel('N');
+    [counts,centers] = hist(r);
+end
 %% Viewing graph nodes
 if display == 1
     figure(1);clf
@@ -63,27 +69,31 @@ C = setxor(s,1:length(s)); % Finding missing parents
 end_nodes = [C-1;s(end)];  % Adding last extremity
 clear C
 %% Finding bifurcations
-clear A
-[uniqueA, i, j] = unique(s,'first');              % Finding duplicates
-indexToDupes = find(not(ismember(1:numel(s),i))); % in source nodes
-biff_nodes = s(indexToDupes-1)-1;                 % Convert idx to nodes
-% figure(72);
-% clf
-% %scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled');
-% plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
-% hold on
-% plot3(pos(biff_nodes,1),pos(biff_nodes,2),pos(biff_nodes,3),'og') % Starting flow node
-% title('Bifurcations');
+[uniqueA, i, j] = unique(s,'first');        % Finding unique nodes
+tmp = find(not(ismember(1:numel(s),i)));    % idx of duplicates
+tmp2 = s(tmp);                              % duplicates
+[biff_nodes, ii, jj] = unique(tmp2,'first');% Keeping only first occurence
+biff_nodes = biff_nodes-1; % it is the previous node
+if display
+    figure(72);
+    clf
+    %scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled');
+    plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
+    hold on
+    plot3(pos(biff_nodes,1),pos(biff_nodes,2),pos(biff_nodes,3),'og') % Starting flow node
+    title('Bifurcations and endnodes');
+    plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'or') % Starting flow node
+end
 %% Directed graph visualisation
-if display == 2
-    disp('Directed graph visualisation')
-    start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+if display == 1
+    disp('Directed graph visualisation...')
+    start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
     finish = start + randi([1 size(s,1)-start-1],1,1); % random integer from [start:#target_nodes-start]
     DG = digraph(s,t); % Directed graph generation
     [SP, D] = shortestpathtree(DG,start,finish); % Shortest path
     edges = table2array(SP.Edges); % Conversion
     nodes = [edges(:,1);edges(end,2)];
-    trajectory = pos(nodes-1,:);
+    trajectory = pos(nodes,:);
     %Plot 1 trajectory
     figure(2);clf;f = plot(SP); % Plot the shortest path graph variable
     f.XData = [pos(1,1);pos(:,1)];
@@ -94,6 +104,7 @@ if display == 2
     f.ArrowSize = 10;
     hold on
     plot3(pos(biff_nodes,1),pos(biff_nodes,2),pos(biff_nodes,3),'og') % Starting flow node
+    plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'ok') % Starting flow node
     xlabel('x','FontSize',20);
     ylabel('y','FontSize',20);
     zlabel('z','FontSize',20);
@@ -107,7 +118,7 @@ distances_volume_calc = sqrt(sum(diff(vectors_volume_calc,[],1).^2,2)); % Euclid
 length_volume_calc = sum(distances_volume_calc);% um
 mean_radius = mean(r); % um
 total_vessel_volume = length_volume_calc*pi()*mean_radius.^2; % um^3 % This is the cumulative trajectories volume! Not network volume
-disp(['Total vasculature volume = ' num2str(total_vessel_volume*1E-9) ' mm^3']);
+% disp(['Total vasculature volume = ' num2str(total_vessel_volume*1E-9) ' mm^3']);
 whole_volume = (max(pos(:,1))-min(pos(:,1)))*(max(pos(:,2))-min(pos(:,2)))*(max(pos(:,3))-min(pos(:,3)));
 % disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
 vessel_volume_mL = total_vessel_volume*1E-9/1000;
@@ -117,20 +128,15 @@ n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in
 %% Extremity points visualization (Computationally heavy)
 if display == 3
     disp('Extremity points visualization')
-    DG_display = digraph(s,t,r_inverse); % Directed graph generation
-    figure(3);clf;f = plot(DG_display,'Layout','force');
-    f.XData = [pos(1,1);pos(:,1)];
-    f.YData = [pos(1,2);pos(:,2)];
-    f.ZData = [pos(1,3);pos(:,3)];
-    f.EdgeColor = 'k';
-    f.LineWidth = 1.5;
-    f.ArrowSize = 5;
-    view(20,30);
+    figure(3);clf;
+    plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
     hold on
-    plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'og');
+    plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'or');
+    plot3(pos(biff_nodes,1),pos(biff_nodes,2),pos(biff_nodes,3),'og') % Starting flow node
     xlabel('x','FontSize',20);
     ylabel('y','FontSize',20);
     zlabel('z','FontSize',20);
+    legend('Nodes','Endnodes','Bifurcations','location','best')
     clear DG_display
 end
 %% Vincent Hingot stats
@@ -189,7 +195,7 @@ BPM = 300;
 freq = BPM/60;
 period = 1/freq;
 dt = 1/samp_freq;
-t_f = 100;
+t_f = 200;
 if t_steady_state > t_f
     t_f = t_steady_state;
 end
@@ -216,24 +222,30 @@ ecg_normalized = ecg_filtered3;
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 %% Trajectories statistics
 % From start to endnodes
+disp('Computing trajectories statistics...');
 DG = digraph(s,t,r_inverse); % Directed graph generation
-end_nodes_biff = [end_nodes;biff_nodes]; % Merge endnodes and bifurcation nodes
+end_nodes_biff = [end_nodes;biff_nodes];%s(2:end);%[end_nodes;biff_nodes]; % Merge endnodes and bifurcation nodes
 d_TRAJECTORIES = zeros(1,numel(end_nodes_biff));
 mean_RADII = zeros(1,numel(end_nodes_biff));
 median_RADII = zeros(1,numel(end_nodes_biff));
 min_RADII = zeros(1,numel(end_nodes_biff));
 max_RADII = zeros(1,numel(end_nodes_biff));
+tic
 for idx = 1:numel(end_nodes_biff)
-    start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+    start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
     [SP, ~] = shortestpathtree(DG,start,end_nodes_biff(idx)); % Shortest path
     edges = table2array(SP.Edges);
-    nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
+    nodes = [edges(:,1);edges(end,2)]; % It is the previous node!
     trajectory = pos(nodes,:); % Nodes positions attribution
     d_TRAJECTORIES(idx) = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
     mean_RADII(idx) = mean(r(nodes));
     median_RADII(idx) = median(r(nodes));
     min_RADII(idx) = min(r(nodes));
     max_RADII(idx) = max(r(nodes));
+    if idx==1
+       time_estimate = toc*numel(end_nodes_biff);
+       fprintf('It should take ~%1.0f min.\n',time_estimate/60);
+    end
 end
 [mean_RADII_sorted,Idx_mean] = sort(mean_RADII,'descend');
 [median_RADII_sorted,Idx_median] = sort(median_RADII,'descend');
@@ -253,7 +265,9 @@ if display == 3
     subplot(1,4,4);
     plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
 end
+toc
 %% Trajectories selection probability
+disp('Computing trajectories selection probability...');
 radii = min_RADII_sorted; % rounding to units
 % end_nodes_sorted = end_nodes(Idx_min);
 end_nodes_biff_sorted = end_nodes_biff(Idx_min);
@@ -284,23 +298,35 @@ end
 % N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 %% Simuation
+disp('Starting simulation...');
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 % bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
-min_length = 100; % Minimum bubble trajectory length (um)
 min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
-DG = digraph(s,t,r_inverse); % Directed graph generation
+min_length = 50; % Minimum bubble trajectory length (um)
+% DG = digraph(s,t,r_inverse); % Directed graph generation
 velocity_multiplicator = 1; % Not in use for now
 v_propagation = NaN;
 v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 n_paquets = n_bubbles/bb_per_paquet;
+%%% Waitbar
+f = waitbar(0,'1','Name','Simulation...',...
+    'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
+
+setappdata(f,'canceling',0);
+%%%
 for pqt = 1:n_paquets % each paquet of trajectories
     clear bubbles_pqt % bubbles paquet
     bubbles_pqt = cell(bb_per_paquet,1);
+    % Check for clicked Cancel button
     for trj = 1:bb_per_paquet % each trajectory
         tic
+        if getappdata(f,'canceling')
+            delete(f);
+            error('Simulation cancelled.')
+        end
         %bubbles{jj}.poiseuille = 2;
         %while(bubbles{jj}.poiseuille>1);bubbles{jj}.poiseuille = abs(std*randn(1));end % normal distribution of mean 0 and std = 0.5
         bubbles_pqt{trj}.poiseuille_original = v_poiseuille(floor(length(v_poiseuille)*rand)+1);
@@ -316,11 +342,15 @@ for pqt = 1:n_paquets % each paquet of trajectories
         clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
         %fprintf('2\n');
         while 1 % create new trajectory while too short
-            random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
-            start = 2;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+            if bypass_N_vs_d_stats == 0
+                random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff_sorted)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
+            else % bypass
+                random_end_node = randi([1 length(end_nodes_biff_sorted)],1,1);
+            end
+            start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
             [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
             edges = table2array(SP.Edges);
-            nodes = [edges(:,1);edges(end,2)]-1; % It is the previous node!
+            nodes = [edges(:,1);edges(end,2)]; % It is the previous node!
             trajectory = pos(nodes,:); % Nodes positions attribution
             d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
             x = rand(1); % random distribution
@@ -328,6 +358,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                 break;
             end
         end
+
         vf_array = [];
         ecg_array = [];
         bubbles_pqt{trj}.d_trajectory = d_trajectory;
@@ -536,14 +567,21 @@ for pqt = 1:n_paquets % each paquet of trajectories
         bubbles_pqt{trj}.XYZ_laminar = laminar_xyz;
         bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
         %vertices{jj} = laminar_xyz;
-        tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
+        [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
+        time_est_str = ['Estimated time to finish (HH:MM:SS): ' ...
+            datestr(estimated_time_hours, 'HH:MM:SS') ' ' ...
+            num2str(round(bubbles_pqt{trj}.ID*100/n_bubbles)) '% - ', ...
+            num2str(bubbles_pqt{trj}.ID)];
+        waitbar(bubbles_pqt{trj}.ID/n_bubbles,f,time_est_str);
     end
     %% Save paquet of bubbles
-    save([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'],'bubbles_pqt','-v6');
+    save([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'],'bubbles_pqt','-v7.3');
     clear bubbles_pqt
 end
+delete(f)
 beep2
-%% Gather all Bubbles
+%% Gather all Microbubbles
+disp('Gathering paquets...')
 clear bubbles
 bubbles = cell(n_bubbles,1); % Initialization
 for pqt = 1:n_paquets
@@ -554,14 +592,15 @@ for pqt = 1:n_paquets
 end
 clear bubbles_pqt
 delete([save_path 'temp\' 'bubbles_pqt_',file_name '*'])
-%% Plot all trajectories
+%% Plot trajectories
+n_bubbles_plot = 200;
 if or(or(display==1,display==2),display==4)
     disp('Plotting Trajectories...');
     figure(6)
     clf
     scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled') % Shortest path nodes);
     n_bubbles = size(bubbles,1);
-    for jj = 1:n_bubbles
+    for jj = 1:n_bubbles_plot
         hold on
         plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),bubbles{jj}.XYZ_laminar(:,2),bubbles{jj}.XYZ_laminar(:,3),'LineWidth',1,'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
         plot1.Color(4) = 0.3;
@@ -608,8 +647,10 @@ rand_pdf = floor(randpdf(N_mean_sample,1:n_bubbles,[n_bubbles,1]))+1;
 rand_pdf_times_N = rand_pdf.*r_mean_sample';
 rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                     .*max(rand_pdf))+1; % Contains indexes of the bubbles 
+rand_pdf_times_N(rand_pdf_times_N > n_bubbles) = n_bubbles; % Fix bound = n_bubbles
 %%                                      % to take in the SS calculation
 %% Stats
+disp('Computing statistics...');
 stats.max_d = ceil(max(stats.RADII*2));
 stats.min_d = floor(min(stats.RADII*2));
 [stats.N_hist,stats.DIAMETER_hist] = hist(stats.RADII*2,(stats.max_d-stats.min_d)/2);
@@ -664,6 +705,7 @@ save([save_path 'bubbles_',save_file_name,'.mat'],'bubbles','samp_freq',...
     'pulsatility','slope','intercept','stats','v_propagation_manual',...
     'filename','-v7.3');
 %% Steady state flow calculation
+disp('Starting steady state flow calculation...');
 clear frames frames_velocities
 dt = bubbles{1}.dt;
 n_frames = t_steady_state/dt;
@@ -773,7 +815,7 @@ else
         'stats','frames_radii','frames_poiseuille','frames_ecg','-v7.3');
 end
 beep2
-disp('Successfully saved frames...')
+disp('Successfully saved frames!')
 fprintf('Theoretically, you could have simulated a maximum of  %3.1f s\n',...
     (n_bubbles/bubble_count*t_steady_state));
 %% Plot steady state flow
