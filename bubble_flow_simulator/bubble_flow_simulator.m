@@ -58,6 +58,12 @@ bypass_N_vs_d_stats = 0;% 0: False, 1: True
 %%% Microvessels Captured With Two-Photon Microscopy," in IEEE Journal 
 %%% of Biomedical and Health Informatics, vol. 23, no. 6, pp. 2551-2562, 
 %%% Nov. 2019, doi: 10.1109/JBHI.2018.2884678.
+%%% You can generate this type of file (.swc) using the app designed by
+%%% Rafat Damseh in his Github directory:
+%%% https://github.com/Damseh/VascularGraph
+%%% to convert a binary vascular volume into a graph model. To obtain an
+%%% .swc tree file, you must convert the directed graph into a tree graph
+%%% and save it.
 
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
