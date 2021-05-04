@@ -23,6 +23,7 @@ t_steady_state = 1; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
 file_name = 'test';
+bypass_N_vs_d_stats = 0; % 0: False, 1: True
 %% Loading
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
