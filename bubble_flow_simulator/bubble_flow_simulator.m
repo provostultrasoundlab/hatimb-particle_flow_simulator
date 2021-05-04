@@ -268,9 +268,16 @@ end
 toc
 %% Trajectories selection probability
 disp('Computing trajectories selection probability...');
-radii = min_RADII_sorted; % rounding to units
+min_length = 20; % Minimum bubble trajectory length (um)
 % end_nodes_sorted = end_nodes(Idx_min);
 end_nodes_biff_sorted = end_nodes_biff(Idx_min);
+d_TRAJECTORIES_sorted = d_TRAJECTORIES(Idx_min);
+%%% Remove too short trajectories
+long_traject_idx = find(d_TRAJECTORIES_sorted>min_length);
+end_nodes_biff_sorted = end_nodes_biff_sorted(long_traject_idx);
+min_RADII_sorted = min_RADII_sorted(long_traject_idx);
+%%%
+radii = min_RADII_sorted; % rounding to units
 radii_rounded = round(min_RADII_sorted);
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
@@ -303,7 +310,6 @@ padding_bubble = bubble_size/2; % To account for the fact that the bubbles are n
 % bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
 min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
-min_length = 50; % Minimum bubble trajectory length (um)
 % DG = digraph(s,t,r_inverse); % Directed graph generation
 velocity_multiplicator = 1; % Not in use for now
 v_propagation = NaN;
