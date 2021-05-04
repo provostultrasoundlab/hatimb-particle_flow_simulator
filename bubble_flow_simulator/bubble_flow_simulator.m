@@ -19,7 +19,7 @@ n_bubbles = 5000; % Number of bubbles trajectories generated
 bb_per_paquet = n_bubbles/100; % n_trajectories per paquet (for storage)
 n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
  % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 1; % Desired simulation time (s)
+t_steady_state = 0.2; % Desired simulation time (s)
 bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
 file_name = 'test';
