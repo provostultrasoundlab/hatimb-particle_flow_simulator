@@ -155,21 +155,26 @@ if display == 3
     clear DG_display
 end
 
-%% Vincent Hingot stats
-%%% N
-log_d = linspace(0,5,1000);
-log_N = 3.7*log_d -8.2;
-d = exp(log_d);
-N = exp(log_N);
-log_v = 1.9*log_d -6;
-v = exp(log_v);
-d_sample_log = log(2*r);
-v_sample_log = 1.9*(d_sample_log) -6;
-v_sample = exp(v_sample_log);
-v_sample_um = v_sample*1000;
-d_sample = 2*r;
-N_sample_log = 3.7*d_sample_log -8.2;
-N_sample = exp(N_sample_log);
+%% Calculating velocity-diameter and number of MB-diameter relationships
+%%% In the article: Hingot, V., Errico, C., Heiles, B. et al.
+%%% Microvascular flow dictates the comprimise between spatial resolution
+%%% and acquisition time in Ultrasound Localisation Microscopy. Sci Rep 9,
+%%% 2456 (2019). https://doi.org/10.1038/s41598-018-38349-x ,we use the
+%%% equations related to Figure 4 C and D. 
+
+log_d = linspace(0,5,1000); % Sampling diameter from 0 to 5 in log(mm)
+log_N = 3.7*log_d -8.2;     % Number of MB log
+d = exp(log_d);             % Diameter (mm)
+N = exp(log_N);             % Number of MB
+log_v = 1.9*log_d -6;       % Velocity log(mm/s)
+v = exp(log_v);             % Velocity (mm/s)
+d_sample_log = log(2*r);    % Diameters in our sample network log(mm)
+v_sample_log = 1.9*(d_sample_log) -6;   % Velocities sample log(mm/s)
+v_sample = exp(v_sample_log);           % Velocities sample (mm/s)
+v_sample_um = v_sample*1000;            % Velocities sample (um)
+d_sample = 2*r;             % Diameters in our sample network (mm)
+N_sample_log = 3.7*d_sample_log -8.2;   % Number of MB log in our sample
+N_sample = exp(N_sample_log);           % Number of MB in our sample
 %%% Affichage
 if display == 2 
     figure(4);clf
