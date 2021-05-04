@@ -6,6 +6,7 @@ clc
 %%% Generating paths to folders of the simulator. Also creates a folder for
 %%% saving in the parent folder of the root of the simulator to avoid
 %%% saving directly in the git-managed folder.
+
 addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
 root = dir('..\..\');
 root_dir = root(1).folder;
@@ -17,6 +18,7 @@ save_path = [root_dir save_dir '\'];
 %%% Since we divide the simulation in paquets to reduce RAM utilization
 %%% during simulation, a directory is created to contain temporary paquets
 %%% of microbubble (MB) trajectories.
+
 mkdir(root_dir,[save_dir '\temp']);
 
 %% Visualize
@@ -24,6 +26,7 @@ mkdir(root_dir,[save_dir '\temp']);
 %%% display = 0; No display
 %%% display = 1; Minimal display
 %%% display = 2; All display
+
 display = 0; 
 
 %% Essential Variables
@@ -32,6 +35,7 @@ display = 0;
 %%% steady-state simulation (SSS). The larger the number of MB in the SSS,
 %%% the larger the number of total MB. Same goes for the SSS duration 
 %%% (n_bubbles_steady_state). 
+
 disp('Running...')
 file_name = 'test'; % Name of the dataset
 samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
@@ -44,11 +48,13 @@ bubble_size = 2;        % MB diameter (um)
 %%% The pulsatility parameter enables you to choose to apply a pulsatile
 %%% flow to your MB trajectories. You can also modify the default
 %%% pulsatility parameters in the corresponding section.
+
 pulsatility = 1;        % 1 = Yes | 0 = No
 
 %%% The bypass_N_vs_d_stats parameter enables a simulation where the number
 %%% of MB per diameter statistic to be violated. This allows for simulation
 %%% of all possible trajectories.
+
 bypass_N_vs_d_stats = 0;% 0: False, 1: True
 
 %% Loading the tree graph model
