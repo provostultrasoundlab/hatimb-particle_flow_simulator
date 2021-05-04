@@ -16,7 +16,7 @@ display = 0; % 0: No display, 1: Minimal display, 2: All displays
 disp('Running...')
 samp_freq = 1000; %(Hz)
 n_bubbles = 5000; % Number of bubbles trajectories generated
-bb_per_paquet = 5000; % n_trajectories per paquet (for storage)
+bb_per_paquet = n_bubbles/100; % n_trajectories per paquet (for storage)
 n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
  % 1/5th is taken to avoid shortage of bubbles
 t_steady_state = 1; % Desired simulation time (s)
