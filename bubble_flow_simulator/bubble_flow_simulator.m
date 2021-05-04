@@ -2,6 +2,31 @@ clear all
 close all
 clc
 
+%% Introduction
+%%% Welcome to the Microbubble (MB) Flow Simulator! 
+%%% The simulation takes place in 3 steps.
+%%% 1) The simulation of MB trajectories
+%%% 2) The steady state simulation
+
+%%% 1. The first step consists of defining parameters necessary for the
+%%% simulation, such as the framerate, filename, source nodes, target nodes,
+%%% etc., but also calculating different arrays in advance, such as the 
+%%% velocity-to-diameter dependancy, number of MB to diameter dependancy, 
+%%% etc. Some of them can be modified to suit your specific needs.
+
+
+%%% 2. In the 2nd step, we want to generate complete trajectories of MB. 
+%%% These trajectories are defined using the parameters from step 1.
+
+%%% 3. In the second step, we want to use those simulated MB positions from
+%%% the 2nd section to populate the network using a constant set of MB. In
+%%% other words, at each timeframe, we will have the positions of a 
+%%% constant set of MB, in X, Y and Z.
+
+%% Copyrights
+%%% Author: Hatim Belgharbi
+
+
 %% Path and Folders Management
 %%% Generating paths to folders of the simulator. Also creates a folder for
 %%% saving in the parent folder of the root of the simulator to avoid
