@@ -1,6 +1,7 @@
 clear all
 close all
 clc
+
 %% Path and Folders Management
 addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
 root = dir('..\..\');
@@ -8,10 +9,13 @@ root_dir = root(1).folder;
 save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
+
 %% Temp folder
 mkdir(root_dir,[save_dir '\temp']);
+
 %% Visualize
 display = 0; % 0: No display, 1: Minimal display, 2: All displays
+
 %% Essential Variables
 disp('Running...')
 samp_freq = 1000; %(Hz)
@@ -24,10 +28,12 @@ bubble_size = 2; % Bubble diameter (um)
 pulsatility = 1; % 1 = Yes | 0 = No
 file_name = 'test';
 bypass_N_vs_d_stats = 0; % 0: False, 1: True
+
 %% Loading
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
 g = importdata(filename);
+
 %% Variables
 target = g(:,1);    % Nodes IDs
 source = g(:,7);    % Parent node
@@ -36,12 +42,14 @@ r = g(:,6);         % Nodes Radii
 r_norm = r./max(r); % Normalized Radii [0,1]
 r_inverse = 1./r;
 r_inverse_norm = 1./r_norm;
+
 %% Radii hist
 if display
     figure(77);clf
     hist(r);xlabel('radius');ylabel('N');
     [counts,centers] = hist(r);
 end
+
 %% Viewing graph nodes
 if display == 1
     figure(1);clf
@@ -55,6 +63,7 @@ if display == 1
     zlabel('z (\mum)')
 end
 drawnow
+
 %% Positions scaling % Use only for anisotropic dataset
 % dim_1 = 2; % (um)
 % dim_2 = 2; % (um)
@@ -63,12 +72,14 @@ drawnow
 % pos(:,2) = pos(:,2) * dim_2;
 % pos(:,3) = pos(:,3) * dim_3;
 % r = r .* (dim_1+dim_2)/2;
+
 %% Graph
 s = source+2;
 t = target+2;
 C = setxor(s,1:length(s)); % Finding missing parents
 end_nodes = [C-1;s(end)];  % Adding last extremity
 clear C
+
 %% Finding bifurcations
 [uniqueA, i, j] = unique(s,'first');        % Finding unique nodes
 tmp = find(not(ismember(1:numel(s),i)));    % idx of duplicates
@@ -85,6 +96,7 @@ if display
     title('Bifurcations and endnodes');
     plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'or') % Starting flow node
 end
+
 %% Directed graph visualisation
 if display == 1
     disp('Directed graph visualisation...')
@@ -112,6 +124,7 @@ if display == 1
     view(20,30)
     set(gcf,'color','w');
 end
+
 %% Volume calculation
 total_vessels_length = 0;
 vectors_volume_calc = pos(t(1:length(t)-1),:)-pos(s(1:length(t)-1),:); % Parallel vectors between all nodes
@@ -126,6 +139,7 @@ vessel_volume_mL = total_vessel_volume*1E-9/1000;
 C_MB = 2E5; % Concentration of MicroBubbles in the bloodstream, Hingot et al, 2019
 n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in the studied vessels
 % disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
+
 %% Extremity points visualization (Computationally heavy)
 if display == 3
     disp('Extremity points visualization')
@@ -140,6 +154,7 @@ if display == 3
     legend('Nodes','Endnodes','Bifurcations','location','best')
     clear DG_display
 end
+
 %% Vincent Hingot stats
 %%% N
 log_d = linspace(0,5,1000);
@@ -182,6 +197,7 @@ if display == 2
     %figure;plot(d,v,'LineWidth',2);xlabel('d (um)');ylabel('v');title('Sample velocities');
     %axis([15 45 0 3.5]);
 end
+
 %% Poiseuille distribution
 x = linspace(-1,1,1000);
 v_poiseuille = 1-x.^2;
@@ -191,6 +207,7 @@ v_poiseuille_squared = v_poiseuille.^2;
 % xlabel('Normalized diameter')
 % ylabel('Poiseuille value (P)')
 % title('Poiseuille Distribution');
+
 %% Pulsatility function
 BPM = 300;
 freq = BPM/60;
@@ -221,6 +238,7 @@ ecg_normalized = ecg_filtered3;
 % set(gca,'FontSize',14)
 % grid on
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
+
 %% Trajectories statistics
 % From start to endnodes
 disp('Computing trajectories statistics...');
@@ -267,6 +285,7 @@ if display == 3
     plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
 end
 toc
+
 %% Trajectories selection probability
 disp('Computing trajectories selection probability...');
 min_length = 20; % Minimum bubble trajectory length (um)
@@ -305,6 +324,7 @@ for i = 1:numel(radii_unique)
 end
 % N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
+
 %% Simuation
 disp('Starting simulation...');
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
@@ -587,6 +607,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
 end
 delete(f)
 beep2
+
 %% Gather all Microbubbles
 disp('Gathering paquets...')
 clear bubbles
@@ -626,6 +647,7 @@ if or(or(display==1,display==2),display==4)
     view(-22,-22)
 end
 drawnow
+
 %% Sorting Trajectories as a Function of Flow/Radius
 disp('Sorting trajectories...');
 clear flow_array
@@ -655,7 +677,8 @@ rand_pdf_times_N = rand_pdf.*r_mean_sample';
 rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
                     .*max(rand_pdf))+1; % Contains indexes of the bubbles 
 rand_pdf_times_N(rand_pdf_times_N > n_bubbles) = n_bubbles; % Fix bound = n_bubbles
-%%                                      % to take in the SS calculation
+%                                      % to take in the SS calculation
+
 %% Stats
 disp('Computing statistics...');
 stats.max_d = ceil(max(stats.RADII*2));
@@ -683,6 +706,7 @@ if display == 1
     legend_title = ['y = ' num2str(stats.b(2)) 'x + ' num2str(stats.b(1))];
     legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
 end
+
 %%
 if display == 3
     figure(96);clf
@@ -702,6 +726,7 @@ if display == 3
     subplot(1,2,2);
     plot(flow_array_sorted)
 end
+
 %% Save
 disp('Saving bubbles...')
 save_file_name = [file_name, '_', num2str(n_bubbles), '_bubbles_', ...
@@ -711,6 +736,7 @@ save([save_path 'bubbles_',save_file_name,'.mat'],'bubbles','samp_freq',...
     'n_bubbles','n_bubbles_steady_state','t_steady_state','bubble_size',...
     'pulsatility','slope','intercept','stats','v_propagation_manual',...
     'filename','-v7.3');
+
 %% Steady state flow calculation
 disp('Starting steady state flow calculation...');
 clear frames frames_velocities
@@ -825,6 +851,7 @@ beep2
 disp('Successfully saved frames!')
 fprintf('Theoretically, you could have simulated a maximum of  %3.1f s\n',...
     (n_bubbles/bubble_count*t_steady_state));
+
 %% Plot steady state flow
 if or(display==1,display==2)
     n_bubbles_steady_state = size(frames,1);
@@ -851,6 +878,7 @@ if or(display==1,display==2)
         drawnow
     end
 end
+
 %% Plot scatter with speeds
 if display == 2
     % Velocities calculation
