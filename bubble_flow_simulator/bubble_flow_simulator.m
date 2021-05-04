@@ -3,6 +3,9 @@ close all
 clc
 
 %% Path and Folders Management
+%%% Generating paths to folders of the simulator. Also creates a folder for
+%%% saving in the parent folder of the root of the simulator to avoid
+%%% saving directly in the git-managed folder.
 addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
 root = dir('..\..\');
 root_dir = root(1).folder;
@@ -11,25 +14,44 @@ mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 
 %% Temp folder
+%%% Since we divide the simulation in paquets to reduce RAM utilization
+%%% during simulation, a directory is created to contain temporary paquets
+%%% of microbubble (MB) trajectories.
 mkdir(root_dir,[save_dir '\temp']);
 
 %% Visualize
-display = 0; % 0: No display, 1: Minimal display, 2: All displays
+%%% Choose wheather you would like:
+%%% display = 0; No display
+%%% display = 1; Minimal display
+%%% display = 2; All display
+display = 0; 
 
 %% Essential Variables
+%%% Modify these variables according to your specifications. You must plan
+%%% the number of total MB (n_bubbles) to be sufficient to populate your
+%%% steady-state simulation (SSS). The larger the number of MB in the SSS,
+%%% the larger the number of total MB. Same goes for the SSS duration 
+%%% (n_bubbles_steady_state). 
 disp('Running...')
-samp_freq = 1000; %(Hz)
-n_bubbles = 5000; % Number of bubbles trajectories generated
-bb_per_paquet = n_bubbles/100; % n_trajectories per paquet (for storage)
-n_bubbles_steady_state = 100; % 1/5th is taken to avoid shortage of bubbles
- % 1/5th is taken to avoid shortage of bubbles
-t_steady_state = 0.2; % Desired simulation time (s)
-bubble_size = 2; % Bubble diameter (um)
-pulsatility = 1; % 1 = Yes | 0 = No
-file_name = 'test';
-bypass_N_vs_d_stats = 0; % 0: False, 1: True
+file_name = 'test'; % Name of the dataset
+samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
+n_bubbles = 5000;   % Number of MB trajectories generated
+bb_per_paquet = n_bubbles/100;  % n_trajectories per paquet (for storage)
+n_bubbles_steady_state = 100;   % Number of MB in the steady-state (SS) simulation
+t_steady_state = 0.2;   % Desired simulation time (s)
+bubble_size = 2;        % MB diameter (um)
 
-%% Loading
+%%% The pulsatility parameter enables you to choose to apply a pulsatile
+%%% flow to your MB trajectories. You can also modify the default
+%%% pulsatility parameters in the corresponding section.
+pulsatility = 1;        % 1 = Yes | 0 = No
+
+%%% The bypass_N_vs_d_stats parameter enables a simulation where the number
+%%% of MB per diameter statistic to be violated. This allows for simulation
+%%% of all possible trajectories.
+bypass_N_vs_d_stats = 0;% 0: False, 1: True
+
+%% Loading the tree graph model
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
 g = importdata(filename);
@@ -213,7 +235,8 @@ v_poiseuille_squared = v_poiseuille.^2;
 % ylabel('Poiseuille value (P)')
 % title('Poiseuille Distribution');
 
-%% Pulsatility function
+%% Pulsatility related parameters
+v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
 BPM = 300;
 freq = BPM/60;
 period = 1/freq;
@@ -339,7 +362,6 @@ min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinit
 % DG = digraph(s,t,r_inverse); % Directed graph generation
 velocity_multiplicator = 1; % Not in use for now
 v_propagation = NaN;
-v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 n_paquets = n_bubbles/bb_per_paquet;
