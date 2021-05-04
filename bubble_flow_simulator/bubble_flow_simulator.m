@@ -52,6 +52,13 @@ pulsatility = 1;        % 1 = Yes | 0 = No
 bypass_N_vs_d_stats = 0;% 0: False, 1: True
 
 %% Loading the tree graph model
+%%% The "tree5.swc" dataset is extracted from data presented in the 
+%%% following article and used here with permission of the owner:
+%%% R. Damseh et al., "Automatic Graph-Based Modeling of Brain 
+%%% Microvessels Captured With Two-Photon Microscopy," in IEEE Journal 
+%%% of Biomedical and Health Informatics, vol. 23, no. 6, pp. 2551-2562, 
+%%% Nov. 2019, doi: 10.1109/JBHI.2018.2884678.
+
 name = 'tree5'; % Name of the .swc graph model
 filename = [name '.swc'];
 g = importdata(filename);
