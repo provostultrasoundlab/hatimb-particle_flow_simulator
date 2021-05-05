@@ -96,29 +96,28 @@ bypass_N_vs_d_stats = 0;% 0: False, 1: True
 %%% .swc tree file, you must convert the directed graph into a tree graph
 %%% and save it.
 
-name = 'tree5'; % Name of the .swc graph model
+name = 'tree5';     % Name of the .swc graph model
 filename = [name '.swc'];
 g = importdata(filename);
 
-%% Variables
 target = g(:,1);    % Nodes IDs
 source = g(:,7);    % Parent node
 pos = g(:,3:5);     % Positions [x,y,z]
-r = g(:,6);         % Nodes Radii
-r_norm = r./max(r); % Normalized Radii [0,1]
-r_inverse = 1./r;
-r_inverse_norm = 1./r_norm;
+r = g(:,6);         % Nodes radii
+r_norm = r./max(r); % Normalized radii [0,1]
+r_inverse = 1./r;   % Calculating the inverse
+r_inverse_norm = 1./r_norm; % Normalized inverse radii [0,1]
 
-%% Radii hist
-if display
-    figure(77);clf
+if display == 2
+    %%% Display a histogram of the original nodes radii
+    figure(1);clf
     hist(r);xlabel('radius');ylabel('N');
     [counts,centers] = hist(r);
 end
 
-%% Viewing graph nodes
-if display == 1
-    figure(1);clf
+if or(display == 1, display == 2)
+    %%% Display network nodes
+    figure(2);clf
     h = scatter3(pos(:,1),pos(:,2),pos(:,3),1,[1 1 1]); % Shortest path nodes);
     alpha = 0.2;
     set(h, 'MarkerEdgeAlpha', alpha, 'MarkerFaceAlpha', alpha)
@@ -153,7 +152,7 @@ tmp2 = s(tmp);                              % duplicates
 [biff_nodes, ii, jj] = unique(tmp2,'first');% Keeping only first occurence
 biff_nodes = biff_nodes-1; % it is the previous node
 if display
-    figure(72);
+    figure(3);
     clf
     %scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled');
     plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
@@ -174,7 +173,7 @@ if display == 1
     nodes = [edges(:,1);edges(end,2)];
     trajectory = pos(nodes,:);
     %Plot 1 trajectory
-    figure(2);clf;f = plot(SP); % Plot the shortest path graph variable
+    figure(4);clf;f = plot(SP); % Plot the shortest path graph variable
     f.XData = [pos(1,1);pos(:,1)];
     f.YData = [pos(1,2);pos(:,2)];
     f.ZData = [pos(1,3);pos(:,3)];
@@ -209,7 +208,7 @@ n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in
 %% Extremity points visualization (Computationally heavy)
 if display == 3
     disp('Extremity points visualization')
-    figure(3);clf;
+    figure(5);clf;
     plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
     hold on
     plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'or');
@@ -243,7 +242,7 @@ N_sample_log = 3.7*d_sample_log -8.2;   % Number of MB log in our sample
 N_sample = exp(N_sample_log);           % Number of MB in our sample
 %%% Affichage
 if display == 2 
-    figure(4);clf
+    figure(6);clf
     subplot(2,3,1);plot(log_d,log_N,'LineWidth',2);
     hold on; plot(d_sample_log,N_sample_log,'.');
     grid on;title('Dependency of the bubble rate with vessel’s diameter');xlabel('log(d)');ylabel('log(N)');
@@ -296,7 +295,7 @@ ecg_filtered2 = ecg_filtered./max(ecg_filtered);
 ecg_filtered3 = ecg_filtered2+0.5;
 ecg_normalized = ecg_filtered3;
 % figure;plot(x,ecg_normalized);xlabel('time(s)');ylabel('Normalized Amplitude');
-% figure(4)
+% figure(7)
 % clf
 % %plot(ecg_raw)
 % hold on 
@@ -344,9 +343,9 @@ end
 [max_RADII_sorted,Idx_max] = sort(max_RADII,'descend');
 d_TRAJECTORIES_norm = min(d_TRAJECTORIES)./d_TRAJECTORIES;
 if display == 3
-    figure;clf
+    figure(8);clf
     plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
-    figure;clf
+    figure(9);clf
     subplot(1,4,1);
     plot(mean_RADII_sorted,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
     subplot(1,4,2);
@@ -695,7 +694,7 @@ delete([save_path 'temp\' 'bubbles_pqt_',file_name '*'])
 n_bubbles_plot = 200;
 if or(or(display==1,display==2),display==4)
     disp('Plotting Trajectories...');
-    figure(6)
+    figure(10)
     clf
     scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled') % Shortest path nodes);
     n_bubbles = size(bubbles,1);
@@ -759,7 +758,7 @@ stats.not_zeros_in_N = not(stats.N_hist==0);
 stats.N_hist = stats.N_hist(stats.not_zeros_in_N);
 stats.DIAMETER_hist = stats.DIAMETER_hist(stats.not_zeros_in_N);
 if display == 1
-    figure(94);clf;
+    figure(11);clf;
     hist(stats.RADII*2,10);title('DIAMETERS');
     xlabel('d (\mum)');ylabel('N');
 end
@@ -770,7 +769,7 @@ stats.b = stats.X\stats.y;
 stats.yCalc2 = stats.X*stats.b;
 stats.yHingot = 3.7*stats.x-8.2;
 if display == 1
-    figure(95);clf;
+    figure(12);clf;
     scatter(log(stats.DIAMETER_hist),log(stats.N_hist));hold on;plot(stats.x,stats.yCalc2,'--');
     plot(stats.x,stats.yHingot,'*-')
     xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs d')
@@ -780,16 +779,16 @@ end
 
 %%
 if display == 3
-    figure(96);clf
+    figure(13);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
-    figure(97);clf
+    figure(14);clf
     hist(rand_pdf,100);title('SS Flow Bubble Probability function');
     xlabel('Bubble ID');ylabel('N');
-    figure(98);clf
+    figure(15);clf
     plot(r_mean_sample,N_mean_sample);
     xlabel('r  mean sample');ylabel('N mean sample');
-    figure(99);clf
+    figure(16);clf
     subplot(1,2,1);
     n = ceil(max(r_mean_sample));
     hist(flow_array_sorted,n); xlabel('r');ylabel('');
@@ -926,7 +925,7 @@ fprintf('Theoretically, you could have simulated a maximum of  %3.1f s\n',...
 %% Plot steady state flow
 if or(display==1,display==2)
     n_bubbles_steady_state = size(frames,1);
-    figure(5);clf
+    figure(17);clf
     grid on
     n_frames = size(frames,2)/5;
     fast_forward = 8;
@@ -974,7 +973,7 @@ if display == 2
             end
         end
     end
-    figure(31);
+    figure(18);
     clf
     set(gcf,'color','w');
     colormap jet
@@ -1004,7 +1003,7 @@ end
 
 %% Plot single trajectories in time
 if display == 2
-    figure(8);
+    figure(19);
     clf
     set(gcf,'color','w');
     title('Simulation bubbles following a laminar flow');
