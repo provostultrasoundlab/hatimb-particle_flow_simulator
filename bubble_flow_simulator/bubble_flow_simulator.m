@@ -209,21 +209,6 @@ parallel_vectors_between_nodes = pos(t(1:length(t)-1),:) -...
 %%% Summing all norms to get total length
 total_network_length = sum(all_node_node_distances);% um
 
-%% Extremity points visualization (Computationally heavy)
-if display == 2
-    disp('Extremity points visualization')
-    figure(5);clf;
-    plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
-    hold on
-    plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'or');
-    plot3(pos(biff_nodes,1),pos(biff_nodes,2),pos(biff_nodes,3),'og') % Starting flow node
-    xlabel('x','FontSize',20);
-    ylabel('y','FontSize',20);
-    zlabel('z','FontSize',20);
-    legend('Nodes','Endnodes','Bifurcations','location','best')
-    clear DG_display
-end
-
 %% 1.6 Calculating velocity-diameter and number of MB-diameter relationships
 %%% In the article: Hingot, V., Errico, C., Heiles, B. et al.
 %%% Microvascular flow dictates the comprimise between spatial resolution
