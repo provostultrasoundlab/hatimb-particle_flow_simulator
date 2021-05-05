@@ -82,7 +82,7 @@ pulsatility = 1;        % 1 = Yes | 0 = No
 
 bypass_N_vs_d_stats = 0;% 0: False, 1: True
 
-%% Loading the tree graph model
+%% Loading and processing the graph model
 %%% The "tree5.swc" dataset is extracted from data presented in the 
 %%% following article and used here with permission of the owner:
 %%% R. Damseh et al., "Automatic Graph-Based Modeling of Brain 
@@ -129,31 +129,40 @@ if or(display == 1, display == 2)
 end
 drawnow
 
-%% Positions scaling % Use only for anisotropic dataset
-% dim_1 = 2; % (um)
-% dim_2 = 2; % (um)
-% dim_3 = 50; % (um)
+%% Positions scaling
+%%% If the dataset has anisotropic voxel, i.e. the dimension of each voxel
+%%% is not the same or is not in um, use this section to strech or compress
+%%% positions to their real dimention.
+
+% dim_1 = 2;    % Dimension of the voxel in x(um)
+% dim_2 = 2;    % Dimension of the voxel in y(um)
+% dim_3 = 50;   % Dimension of the voxel in z(um)
 % pos(:,1) = pos(:,1) * dim_1;
 % pos(:,2) = pos(:,2) * dim_2;
 % pos(:,3) = pos(:,3) * dim_3;
 % r = r .* (dim_1+dim_2)/2;
 
-%% Graph
-s = source+2;
-t = target+2;
+%% Source, target, end and bifurcation nodes
+%%% Using source nodes from the file, we modify them to be used in MATLAB
+%%% with coefficients starting with 1
+s = source+2;   % Source nodes
+t = target+2;   % Target nodes
+%%% We find end-nodes by looking at nodes that don't have parent nodes.
 C = setxor(s,1:length(s)); % Finding missing parents
 end_nodes = [C-1;s(end)];  % Adding last extremity
 clear C
 
-%% Finding bifurcations
+%%% Finding bifurcations
+%%% To find bifurcation nodes, we look at nodes that have 2 successor
+%%% nodes, which makes them biffurcation nodes.
 [uniqueA, i, j] = unique(s,'first');        % Finding unique nodes
 tmp = find(not(ismember(1:numel(s),i)));    % idx of duplicates
 tmp2 = s(tmp);                              % duplicates
 [biff_nodes, ii, jj] = unique(tmp2,'first');% Keeping only first occurence
 biff_nodes = biff_nodes-1; % it is the previous node
-if display
-    figure(3);
-    clf
+
+if display == 2
+    figure(3);clf
     %scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled');
     plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
     hold on
@@ -163,6 +172,8 @@ if display
 end
 
 %% Directed graph visualisation
+%%% Here, we show an example of a random trajectory selection in the
+%%% directed graph using the shortestpathtree() function on 2 nodes
 if display == 1
     disp('Directed graph visualisation...')
     start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
