@@ -268,35 +268,43 @@ v_poiseuille_squared = v_poiseuille.^2;
 % title('Poiseuille Distribution');
 
 %% 1.8 Pulsatility related parameters
+%%% We emulate a pulsatile flow using a modified ECG. Using a specific
+%%% heart frequency, we can multiply MB velocities with a factor as a
+%%% function of time and vessel position later on.
+
 v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
-BPM = 300;
-freq = BPM/60;
-period = 1/freq;
-dt = 1/samp_freq;
-t_f = 200;
-if t_steady_state > t_f
+BPM = 300;          % We chose a heartrate of 300 BPM to match a mouse heartrate
+freq = BPM/60;      % Frequency (Hz)
+period = 1/freq;    % Period (s)
+dt = 1/samp_freq;   % Timestamp (s)
+t_f = 200;          % An arbitrary time length that overestimates necessary simulation time
+% A condition to ensure that t_f is always larger or equal to desired 
+% simulation time
+if t_steady_state > t_f 
     t_f = t_steady_state;
 end
-x = 0:dt:t_f-dt;
-ecg_raw = ecg(BPM,dt,t_f);
-ecg_filtered = ecg_raw-min(ecg_raw);
-ecg_filtered2 = ecg_filtered./max(ecg_filtered);
-ecg_filtered3 = ecg_filtered2+0.5;
-ecg_normalized = ecg_filtered3;
-% figure;plot(x,ecg_normalized);xlabel('time(s)');ylabel('Normalized Amplitude');
-% figure(7)
-% clf
-% %plot(ecg_raw)
-% hold on 
-% % plot(x ,ecg_filtered)
-% % plot(x ,ecg_filtered2);
-% plot(x ,ecg_filtered3,'LineWidth',1.5);
-% xlabel('Time (s)');
-% ylabel('Multiplication Factor');
-% title([num2str(BPM) ,' BPM']);
-% % legend('ecg filtered','ecg filtered2','ecg filtered3','location','best');
-% set(gca,'FontSize',14)
-% grid on
+x = 0:dt:t_f-dt;            % Time vector
+ecg_raw = ecg(BPM,dt,t_f);  % ECG amplitude
+ecg_filtered = ecg_raw-min(ecg_raw); % Translating vector above negative values
+ecg_filtered2 = ecg_filtered./max(ecg_filtered); % Normalization
+ecg_filtered3 = ecg_filtered2+0.5; % Translation so that mean = 1 and avoid close to 0 values
+[yupper,ylower] = envelope(ecg_filtered3,3,'peak'); % Take only the envelope to avoid abrupt changes
+yupper(yupper>1.5) = 1.5;   % Ensure max value is 1.5
+ecg_normalized = ecg_filtered3; % Just a step to leave room for subsequent filtering
+if display == 2
+    figure(7)
+    clf
+    plot(x ,ecg_normalized,'LineWidth',1.5);
+    hold on 
+    plot(x ,yupper,'LineWidth',1.5);
+    xlim([0 1])
+    xlabel('Time (s)');
+    ylabel('Multiplication Factor');
+    title([num2str(BPM) ,' BPM']);
+    % legend('ecg filtered','ecg filtered2','ecg filtered3','location','best');
+    set(gca,'FontSize',14)
+    grid on
+end
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 
 %% 1.9 Trajectories statistics
