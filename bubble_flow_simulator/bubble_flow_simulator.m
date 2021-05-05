@@ -201,20 +201,15 @@ if display == 1
     set(gcf,'color','w');
 end
 
-%% Volume calculation
-total_vessels_length = 0;
-vectors_volume_calc = pos(t(1:length(t)-1),:)-pos(s(1:length(t)-1),:); % Parallel vectors between all nodes
-distances_volume_calc = sqrt(sum(diff(vectors_volume_calc,[],1).^2,2)); % Euclidian norms calculation
-length_volume_calc = sum(distances_volume_calc);% um
-mean_radius = mean(r); % um
-total_vessel_volume = length_volume_calc*pi()*mean_radius.^2; % um^3 % This is the cumulative trajectories volume! Not network volume
-% disp(['Total vasculature volume = ' num2str(total_vessel_volume*1E-9) ' mm^3']);
-whole_volume = (max(pos(:,1))-min(pos(:,1)))*(max(pos(:,2))-min(pos(:,2)))*(max(pos(:,3))-min(pos(:,3)));
-% disp(['Vessel volume ratio = ' num2str(total_vessel_volume/whole_volume*100) '%']);
-vessel_volume_mL = total_vessel_volume*1E-9/1000;
-C_MB = 2E5; % Concentration of MicroBubbles in the bloodstream, Hingot et al, 2019
-n_bubbles_in_network = round(vessel_volume_mL*C_MB); % Number of microbubbles in the studied vessels
-% disp(['Number of MB in vessels : ' num2str(n_bubbles_in_network)]);
+%% Total network length calculation
+%%% Parallel vectors between all nodes
+parallel_vectors_between_nodes = pos(t(1:length(t)-1),:) -...
+                                 pos(s(1:length(t)-1),:); 
+%%% Euclidian norms calculation
+ all_node_node_distances = sqrt(sum(diff(parallel_vectors_between_nodes,...
+                                [],1).^2,2)); 
+%%% Summing all norms to get total length
+total_network_length = sum(all_node_node_distances);% um
 
 %% Extremity points visualization (Computationally heavy)
 if display == 3
