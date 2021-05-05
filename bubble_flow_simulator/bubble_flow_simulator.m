@@ -288,9 +288,9 @@ ecg_raw = ecg(BPM,dt,t_f);  % ECG amplitude
 ecg_filtered = ecg_raw-min(ecg_raw); % Translating vector above negative values
 ecg_filtered2 = ecg_filtered./max(ecg_filtered); % Normalization
 ecg_filtered3 = ecg_filtered2+0.5; % Translation so that mean = 1 and avoid close to 0 values
-[yupper,ylower] = envelope(ecg_filtered3,3,'peak'); % Take only the envelope to avoid abrupt changes
+[ecg_filtered4,ylower] = envelope(ecg_filtered3,3,'peak'); % Take only the envelope to avoid abrupt changes
 yupper(yupper>1.5) = 1.5;   % Ensure max value is 1.5
-ecg_normalized = ecg_filtered3; % Just a step to leave room for subsequent filtering
+ecg_normalized = ecg_filtered4; % Just a step to leave room for subsequent filtering
 if display == 2
     figure(7)
     clf
