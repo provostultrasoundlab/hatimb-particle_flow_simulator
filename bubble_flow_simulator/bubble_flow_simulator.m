@@ -27,7 +27,7 @@ clc
 %%% Author: Hatim Belgharbi
 
 
-%% Path and Folders Management
+%% 0.1 Path and Folders Management
 %%% Generating paths to folders of the simulator. Also creates a folder for
 %%% saving in the parent folder of the root of the simulator to avoid
 %%% saving directly in the git-managed folder.
@@ -39,14 +39,13 @@ save_dir = '\hatimb-particle_flow_simulator_DATA';
 mkdir(root_dir,save_dir);
 save_path = [root_dir save_dir '\'];
 
-%% Temp folder
 %%% Since we divide the simulation in paquets to reduce RAM utilization
 %%% during simulation, a directory is created to contain temporary paquets
 %%% of microbubble (MB) trajectories.
 
 mkdir(root_dir,[save_dir '\temp']);
 
-%% Visualize
+%% 0.2 Visualization
 %%% Choose wheather you would like:
 %%% display = 0; No display
 %%% display = 1; Minimal display
@@ -54,7 +53,7 @@ mkdir(root_dir,[save_dir '\temp']);
 
 display = 0; 
 
-%% Essential Variables
+%% 1.1 Essential Variables
 %%% Modify these variables according to your specifications. You must plan
 %%% the number of total MB (n_bubbles) to be sufficient to populate your
 %%% steady-state simulation (SSS). The larger the number of MB in the SSS,
@@ -82,7 +81,7 @@ pulsatility = 1;        % 1 = Yes | 0 = No
 
 bypass_N_vs_d_stats = 0;% 0: False, 1: True
 
-%% Loading and processing the graph model
+%% 1.2 Loading and processing the graph model
 %%% The "tree5.swc" dataset is extracted from data presented in the 
 %%% following article and used here with permission of the owner:
 %%% R. Damseh et al., "Automatic Graph-Based Modeling of Brain 
@@ -129,7 +128,7 @@ if or(display == 1, display == 2)
 end
 drawnow
 
-%% Positions scaling
+%% 1.3 Positions scaling
 %%% If the dataset has anisotropic voxel, i.e. the dimension of each voxel
 %%% is not the same or is not in um, use this section to strech or compress
 %%% positions to their real dimention.
@@ -142,7 +141,7 @@ drawnow
 % pos(:,3) = pos(:,3) * dim_3;
 % r = r .* (dim_1+dim_2)/2;
 
-%% Source, target, end and bifurcation nodes
+%% 1.4 Source, target, end and bifurcation nodes
 %%% Using source nodes from the file, we modify them to be used in MATLAB
 %%% with coefficients starting with 1
 s = source+2;   % Source nodes
@@ -171,7 +170,6 @@ if display == 2
     plot3(pos(end_nodes,1),pos(end_nodes,2),pos(end_nodes,3),'or') % Starting flow node
 end
 
-%% Directed graph visualisation
 %%% Here, we show an example of a random trajectory selection in the
 %%% directed graph using the shortestpathtree() function on 2 nodes
 if display == 1
@@ -201,7 +199,7 @@ if display == 1
     set(gcf,'color','w');
 end
 
-%% Total network length calculation
+%% 1.5 Total network length calculation
 %%% Parallel vectors between all nodes
 parallel_vectors_between_nodes = pos(t(1:length(t)-1),:) -...
                                  pos(s(1:length(t)-1),:); 
@@ -212,7 +210,7 @@ parallel_vectors_between_nodes = pos(t(1:length(t)-1),:) -...
 total_network_length = sum(all_node_node_distances);% um
 
 %% Extremity points visualization (Computationally heavy)
-if display == 3
+if display == 2
     disp('Extremity points visualization')
     figure(5);clf;
     plot3(pos(:,1),pos(:,2),pos(:,3),'.k');
@@ -226,7 +224,7 @@ if display == 3
     clear DG_display
 end
 
-%% Calculating velocity-diameter and number of MB-diameter relationships
+%% 1.6 Calculating velocity-diameter and number of MB-diameter relationships
 %%% In the article: Hingot, V., Errico, C., Heiles, B. et al.
 %%% Microvascular flow dictates the comprimise between spatial resolution
 %%% and acquisition time in Ultrasound Localisation Microscopy. Sci Rep 9,
@@ -274,7 +272,7 @@ if display == 2
     %axis([15 45 0 3.5]);
 end
 
-%% Poiseuille distribution
+%% 1.7 Poiseuille distribution
 x = linspace(-1,1,1000);
 v_poiseuille = 1-x.^2;
 v_poiseuille_squared = v_poiseuille.^2;
@@ -284,7 +282,7 @@ v_poiseuille_squared = v_poiseuille.^2;
 % ylabel('Poiseuille value (P)')
 % title('Poiseuille Distribution');
 
-%% Pulsatility related parameters
+%% 1.8 Pulsatility related parameters
 v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
 BPM = 300;
 freq = BPM/60;
@@ -316,7 +314,7 @@ ecg_normalized = ecg_filtered3;
 % grid on
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 
-%% Trajectories statistics
+%% 1.9 Trajectories statistics
 % From start to endnodes
 disp('Computing trajectories statistics...');
 DG = digraph(s,t,r_inverse); % Directed graph generation
@@ -363,7 +361,7 @@ if display == 3
 end
 toc
 
-%% Trajectories selection probability
+%% 1.10 Trajectories selection probability
 disp('Computing trajectories selection probability...');
 min_length = 20; % Minimum bubble trajectory length (um)
 % end_nodes_sorted = end_nodes(Idx_min);
@@ -402,7 +400,7 @@ end
 % N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 
-%% Simuation
+%% 2.1 Simuation
 disp('Starting simulation...');
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 % bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
