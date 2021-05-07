@@ -65,7 +65,7 @@ file_name = 'test'; % Name of the dataset
 samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
 n_bubbles = 5000;   % Number of MB trajectories generated
 bb_per_paquet = n_bubbles/100;  % n_trajectories per paquet (for storage)
-n_bubbles_steady_state = 100;   % Number of MB in the steady-state (SS) simulation
+n_bubbles_steady_state = 10;   % Number of MB in the steady-state (SS) simulation
 t_steady_state = 0.2;   % Desired simulation time (s)
 bubble_size = 2;        % MB diameter (um)
 
@@ -269,11 +269,13 @@ v_poiseuille_squared = v_poiseuille.^2;
 
 %% 1.8 Pulsatility related parameters
 %%% We emulate a pulsatile flow using a modified ECG. Using a specific
-%%% heart frequency, we can multiply MB velocities with a factor as a
-%%% function of time and vessel position later on.
+%%% heart frequency, we can multiply MB velocities with a normalized 
+%%% factor as a function of time and vessel position later on.
 
-v_propagation_manual = 25000; % (um/s) Velocity of the pulse. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
-BPM = 300;          % We chose a heartrate of 300 BPM to match a mouse heartrate
+% Velocity of the pulse. 
+% https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3330793/
+v_propagation_manual = 25000; %(um/s)
+BPM = 300;          % Heartrate of 300 BPM to match a mouse heartrate
 freq = BPM/60;      % Frequency (Hz)
 period = 1/freq;    % Period (s)
 dt = 1/samp_freq;   % Timestamp (s)
@@ -289,14 +291,14 @@ ecg_filtered = ecg_raw-min(ecg_raw); % Translating vector above negative values
 ecg_filtered2 = ecg_filtered./max(ecg_filtered); % Normalization
 ecg_filtered3 = ecg_filtered2+0.5; % Translation so that mean = 1 and avoid close to 0 values
 [ecg_filtered4,ylower] = envelope(ecg_filtered3,3,'peak'); % Take only the envelope to avoid abrupt changes
-yupper(yupper>1.5) = 1.5;   % Ensure max value is 1.5
+ecg_filtered4(ecg_filtered4>1.5) = 1.5;   % Ensure max value is 1.5
 ecg_normalized = ecg_filtered4; % Just a step to leave room for subsequent filtering
 if display == 2
     figure(7)
     clf
     plot(x ,ecg_normalized,'LineWidth',1.5);
     hold on 
-    plot(x ,yupper,'LineWidth',1.5);
+    plot(x ,ecg_filtered4,'LineWidth',1.5);
     xlim([0 1])
     xlabel('Time (s)');
     ylabel('Multiplication Factor');
@@ -308,40 +310,46 @@ end
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 
 %% 1.9 Trajectories statistics
-% From start to endnodes
+%%% Here, we compute, for all possible trajectories, statistics such as the
+%%% average vessel radius, minimal vessel radius, and so on to bo used in
+%%% the next section. 
 disp('Computing trajectories statistics...');
 DG = digraph(s,t,r_inverse); % Directed graph generation
-end_nodes_biff = [end_nodes;biff_nodes];%s(2:end);%[end_nodes;biff_nodes]; % Merge endnodes and bifurcation nodes
+end_nodes_biff = [end_nodes];%s(2:end);% Merge endnodes and bifurcation nodes
+%%% Initialization of variables
 d_TRAJECTORIES = zeros(1,numel(end_nodes_biff));
 mean_RADII = zeros(1,numel(end_nodes_biff));
 median_RADII = zeros(1,numel(end_nodes_biff));
 min_RADII = zeros(1,numel(end_nodes_biff));
 max_RADII = zeros(1,numel(end_nodes_biff));
 tic
+%%% For all possible trajectories
 for idx = 1:numel(end_nodes_biff)
-    start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+    start = 1;  % Start at node #1
     [SP, ~] = shortestpathtree(DG,start,end_nodes_biff(idx)); % Shortest path
-    edges = table2array(SP.Edges);
-    nodes = [edges(:,1);edges(end,2)]; % It is the previous node!
-    trajectory = pos(nodes,:); % Nodes positions attribution
-    d_TRAJECTORIES(idx) = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
-    mean_RADII(idx) = mean(r(nodes));
-    median_RADII(idx) = median(r(nodes));
-    min_RADII(idx) = min(r(nodes));
-    max_RADII(idx) = max(r(nodes));
-    if idx==1
-       time_estimate = toc*numel(end_nodes_biff);
-       fprintf('It should take ~%1.0f min.\n',time_estimate/60);
-    end
+    edges = table2array(SP.Edges); % Get the nodes indexes
+    nodes = [edges(:,1);edges(end,2)]; % Add the last node from 2nd column
+    trajectory = pos(nodes,:); % Nodes positions attribution (x,y,z)
+    d_TRAJECTORIES(idx) = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length (um)
+    mean_RADII(idx) = mean(r(nodes));       % Radii average in trajectory
+    median_RADII(idx) = median(r(nodes));   % Radii median in trajectory
+    min_RADII(idx) = min(r(nodes));         % Min radius in trajectory
+    max_RADII(idx) = max(r(nodes));         % Max radius in trajectory
 end
+%%% We sort radii according to min, max, mean and median to obtain sorted
+%%% indexes that can be used later on.
 [mean_RADII_sorted,Idx_mean] = sort(mean_RADII,'descend');
 [median_RADII_sorted,Idx_median] = sort(median_RADII,'descend');
 [min_RADII_sorted,Idx_min] = sort(min_RADII,'descend');
 [max_RADII_sorted,Idx_max] = sort(max_RADII,'descend');
+%%% Here we chose to select trajectories using the MINIMUM radius, because
+%%% we think by doing so, we will avoid underestimating the probability of
+%%% selecting a certain trajectory
 d_TRAJECTORIES_norm = min(d_TRAJECTORIES)./d_TRAJECTORIES;
-if display == 3
+
+if display == 2
     figure(8);clf
-    plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectry length (\mum)')
+    plot(d_TRAJECTORIES,'.');title('Length');ylabel('Trajectory length (\mum)')
     figure(9);clf
     subplot(1,4,1);
     plot(mean_RADII_sorted,'.');title('Radius - Mean');ylabel('Mean trajectory radius (\mum)');
@@ -370,19 +378,24 @@ radii_rounded = round(min_RADII_sorted);
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
 n_radii = numel(radii_unique);% number of differrent radii
-slope = 9; % %%% Tweaking to a higher slope to get close to Hingot's
-intercept = 0;
-N_traject_log = slope*(log(radii*2))+intercept; %%% TEMPORARY FOR TESTING
+%%% Using a relationship in the form of N = slope*diameter + intercept,
+%%% where N is the MB count per diameter. Inspired from Hingot, V., Errico,
+%%% C., Heiles, B. et al. Sci Rep 2019, figure 4 C.
+%%% Using a histogram later on, we tweeked the "slope" value to get closer
+%%% to the 3.7 in the article.
+slope = 8;
+%%% Since the vascular network is completely different, the only value of
+%%% interest is the slope of the N-vs-diameter dependancy. We want to
+%%% create a probability density function that accounts for the N-vs-d
+%%% dependancy to select the different trajectories.
+intercept = 0;  
+N_traject_log = slope*(log(radii*2))+intercept; % Number of MB log 
 % N_traject_continuous_log = 3.7*(log(radii_unique_continuous*2)) -8.2;
-N_traject = exp(N_traject_log);
-(log(N_traject(1))-log(N_traject(2)))/(log(radii(1)*2)-log(radii(2)*2));
-N_traject(1);
-N_traject(2);
-% N_traject_continuous = exp(N_traject_continuous_log);
+N_traject = exp(N_traject_log); % Number of MB
 % N_traject_continuous_norm = N_traject_continuous/sum(N_traject_continuous);
 % Let's normalize the N so that sum(N) = 1
 % Let's account for that
-radii_count = histc(radii_rounded, radii_unique); % this willgive the number of occurences of each unique element
+radii_count = histc(radii_rounded, radii_unique); % this will give the number of occurences of each unique element
 radii_count = fliplr(radii_count);
 radii_unique = sort(radii_unique,'descend');
 for i = 1:numel(radii_unique)
@@ -392,7 +405,6 @@ for i = 1:numel(radii_unique)
 end
 % N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
-
 %% 2.1 Simuation
 disp('Starting simulation...');
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
@@ -676,6 +688,8 @@ delete(f)
 beep2
 
 %% Gather all Microbubbles
+%%% In this section, we gather the temporarily saved MB trajectories and
+%%% store them back in the RAM.
 disp('Gathering paquets...')
 clear bubbles
 bubbles = cell(n_bubbles,1); % Initialization
@@ -737,7 +751,7 @@ end
 % clear bubbles_tmp
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
 d_mean_sample_log = log(2*r_mean_sample);
-N_mean_sample_log = 3.7*d_mean_sample_log -8.2;
+N_mean_sample_log = 3.7*d_mean_sample_log;
 N_mean_sample = exp(N_mean_sample_log);
 rand_pdf = floor(randpdf(N_mean_sample,1:n_bubbles,[n_bubbles,1]))+1;
 rand_pdf_times_N = rand_pdf.*r_mean_sample';
@@ -754,7 +768,7 @@ stats.min_d = floor(min(stats.RADII*2));
 stats.not_zeros_in_N = not(stats.N_hist==0);
 stats.N_hist = stats.N_hist(stats.not_zeros_in_N);
 stats.DIAMETER_hist = stats.DIAMETER_hist(stats.not_zeros_in_N);
-if display == 1
+if or(display == 1, display == 2)
     figure(11);clf;
     hist(stats.RADII*2,10);title('DIAMETERS');
     xlabel('d (\mum)');ylabel('N');
@@ -765,7 +779,7 @@ stats.X = [ones(length(stats.x),1) stats.x];
 stats.b = stats.X\stats.y;
 stats.yCalc2 = stats.X*stats.b;
 stats.yHingot = 3.7*stats.x-8.2;
-if display == 1
+if display == 3
     figure(12);clf;
     scatter(log(stats.DIAMETER_hist),log(stats.N_hist));hold on;plot(stats.x,stats.yCalc2,'--');
     plot(stats.x,stats.yHingot,'*-')
@@ -775,7 +789,7 @@ if display == 1
 end
 
 %%
-if display == 3
+if display == 2
     figure(13);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
@@ -944,79 +958,4 @@ if or(display==1,display==2)
         darkBackground(gcf)
         drawnow
     end
-end
-
-%% Plot scatter with speeds
-if display == 2
-    % Velocities calculation
-    max_d = 0;
-    dt = bubbles{1}.dt;
-    n_bubbles = 3000;%size(bubbles,1);
-    for jj = 1:n_bubbles
-        if(~isempty(bubbles{jj}.XYZ_laminar))
-            if(size(bubbles{jj}.XYZ_laminar,1)>=2)
-                %difference = diff(bubbles{jj}.XYZ_laminar,[],1);
-                fx_plus_h = bubbles{jj}.XYZ_laminar(3:end,:);
-                fx_minus_h = bubbles{jj}.XYZ_laminar(1:end-2,:);
-                difference = (fx_plus_h - fx_minus_h)/2; % Centered numerical differentiation of order 2
-                bubbles{jj}.velocities = sqrt(sum(difference.^2,2)); % velocity calculation
-                if(max(bubbles{jj}.velocities)>max_d)
-                    max_d = max(bubbles{jj}.velocities);
-                end
-                bubbles{jj}.velocities(end+1) = bubbles{jj}.velocities(end);% add a component to have equal length as XYZ
-                bubbles{jj}.velocities(end+1) = bubbles{jj}.velocities(end);% add a component to have equal length as XYZ
-                bubbles{jj}.velocities = smooth(bubbles{jj}.velocities);
-                bubbles{jj}.velocities_normalized = bubbles{jj}.velocities./max_d;
-            end
-        end
-    end
-    figure(18);
-    clf
-    set(gcf,'color','w');
-    colormap jet
-    for jj = 1:n_bubbles
-        if(~isempty(bubbles{jj}.XYZ_laminar))
-            if(size(bubbles{jj}.XYZ_laminar,1)>=2)
-                n = length(bubbles{jj}.velocities);
-                h = scatter3(bubbles{jj}.XYZ_laminar(:,1),...
-                    bubbles{jj}.XYZ_laminar(:,2), ...
-                    bubbles{jj}.XYZ_laminar(:,3),1,...
-                    [bubbles{jj}.velocities_normalized],'Filled');
-                alpha = bubbles{jj}.poiseuille;
-                set(h, 'MarkerEdgeAlpha', alpha, 'MarkerFaceAlpha', alpha)
-                hold on
-            end
-        end 
-    end
-    darkBackground(gcf)
-    xlabel('\color{white}x (\mum)','FontSize',14);
-    ylabel('y (\mum)','FontSize',14);
-    zlabel('z (\mum)','FontSize',14);
-    title(['\color{white} Bubbles velocities ' num2str(1/dt) 'Hz']);
-    c = colorbar;
-    c.Color = [1 1 1];
-view(-24,46)
-end
-
-%% Plot single trajectories in time
-if display == 2
-    figure(19);
-    clf
-    set(gcf,'color','w');
-    title('Simulation bubbles following a laminar flow');
-    hold on
-    scatter3(pos(:,1),pos(:,2),pos(:,3),1,[0 0 0],'filled') % Shortest path nodes);
-    xlabel('x','FontSize',20);
-    ylabel('y','FontSize',20);
-    zlabel('z','FontSize',20);
-    view(-105,20)
-    n_bubbles = size(bubbles,1);
-    for jj = 1:n_bubbles
-        if(~isempty(bubbles{jj}))
-            if(~isempty(bubbles{jj}.XYZ_laminar));plot2 = plot3(bubbles{jj}.XYZ_laminar(:,1), bubbles{jj}.XYZ_laminar(:,2), bubbles{jj}.XYZ_laminar(:,3),'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
-                plot2.Color(4) = 0.4;end
-            drawnow
-        end
-    end
-    legend('Original nodes','Generated trajectories (Red = Fast) (Blue = Slow)');
 end
