@@ -179,7 +179,7 @@ if display == 1
     DG = digraph(s,t); % Directed graph generation
     [SP, D] = shortestpathtree(DG,start,finish); % Shortest path
     edges = table2array(SP.Edges); % Conversion
-    nodes = [edges(:,1);edges(end,2)];
+    nodes = edges(:,2)-1;
     trajectory = pos(nodes,:);
     %Plot 1 trajectory
     figure(4);clf;f = plot(SP); % Plot the shortest path graph variable
@@ -279,7 +279,7 @@ BPM = 300;          % Heartrate of 300 BPM to match a mouse heartrate
 freq = BPM/60;      % Frequency (Hz)
 period = 1/freq;    % Period (s)
 dt = 1/samp_freq;   % Timestamp (s)
-t_f = 200;          % An arbitrary time length that overestimates necessary simulation time
+t_f = 1000;          % An arbitrary time length that overestimates necessary simulation time
 % A condition to ensure that t_f is always larger or equal to desired 
 % simulation time
 if t_steady_state > t_f 
@@ -315,7 +315,7 @@ clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 %%% the next section. 
 disp('Computing trajectories statistics...');
 DG = digraph(s,t,r_inverse); % Directed graph generation
-end_nodes_biff = [end_nodes];%s(2:end);% Merge endnodes and bifurcation nodes
+end_nodes_biff = [t];%s(2:end);% Merge endnodes and bifurcation nodes
 %%% Initialization of variables
 d_TRAJECTORIES = zeros(1,numel(end_nodes_biff));
 mean_RADII = zeros(1,numel(end_nodes_biff));
@@ -328,7 +328,8 @@ for idx = 1:numel(end_nodes_biff)
     start = 1;  % Start at node #1
     [SP, ~] = shortestpathtree(DG,start,end_nodes_biff(idx)); % Shortest path
     edges = table2array(SP.Edges); % Get the nodes indexes
-    nodes = [edges(:,1);edges(end,2)]; % Add the last node from 2nd column
+%     nodes = [edges(:,1);edges(end,2)]; % Add the last node from 2nd column
+    nodes = edges(:,2)-1; % Nodes correspond to the previous indexes
     trajectory = pos(nodes,:); % Nodes positions attribution (x,y,z)
     d_TRAJECTORIES(idx) = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length (um)
     mean_RADII(idx) = mean(r(nodes));       % Radii average in trajectory
@@ -361,7 +362,7 @@ if display == 2
     plot(max_RADII_sorted,'.');title('Radius - MAX');ylabel('Max trajectory radius (\mum)');
 end
 toc
-
+beep2
 %% 1.10 Trajectories selection probability
 disp('Computing trajectories selection probability...');
 min_length = 20; % Minimum bubble trajectory length (um)
@@ -371,10 +372,10 @@ d_TRAJECTORIES_sorted = d_TRAJECTORIES(Idx_min);
 %%% Remove too short trajectories
 long_traject_idx = find(d_TRAJECTORIES_sorted>min_length);
 end_nodes_biff_sorted = end_nodes_biff_sorted(long_traject_idx);
-min_RADII_sorted = min_RADII_sorted(long_traject_idx);
+min_RADII_sorted_long = min_RADII_sorted(long_traject_idx);
 %%%
-radii = min_RADII_sorted; % rounding to units
-radii_rounded = round(min_RADII_sorted);
+radii = min_RADII_sorted_long; % rounding to units
+radii_rounded = round(min_RADII_sorted_long);
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
 n_radii = numel(radii_unique);% number of differrent radii
@@ -383,7 +384,7 @@ n_radii = numel(radii_unique);% number of differrent radii
 %%% C., Heiles, B. et al. Sci Rep 2019, figure 4 C.
 %%% Using a histogram later on, we tweeked the "slope" value to get closer
 %%% to the 3.7 in the article.
-slope = 8;
+slope = 3.7;
 %%% Since the vascular network is completely different, the only value of
 %%% interest is the slope of the N-vs-diameter dependancy. We want to
 %%% create a probability density function that accounts for the N-vs-d
@@ -401,12 +402,13 @@ radii_unique = sort(radii_unique,'descend');
 for i = 1:numel(radii_unique)
     start = sum(radii_count(1:i-1)) + 1;
     finish = sum(radii_count(1:i));
-    N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i);
+    N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i); % Divide probability by number of times that radius is repeated
 end
 % N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 %% 2.1 Simuation
 disp('Starting simulation...');
+fprintf('\n...');
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 % bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
@@ -417,22 +419,15 @@ v_propagation = NaN;
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 n_paquets = n_bubbles/bb_per_paquet;
-%%% Waitbar
-f = waitbar(0,'1','Name','Simulation...',...
-    'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
-
-setappdata(f,'canceling',0);
 %%%
+% N_traject_norm = N_traject_norm+0.000001*rand(size(N_traject_norm));
+all_random_nodes = 1+round(pdfrnd(0:numel(end_nodes_biff_sorted)-1, N_traject_norm, n_bubbles));
 for pqt = 1:n_paquets % each paquet of trajectories
     clear bubbles_pqt % bubbles paquet
     bubbles_pqt = cell(bb_per_paquet,1);
     % Check for clicked Cancel button
     for trj = 1:bb_per_paquet % each trajectory
         tic
-        if getappdata(f,'canceling')
-            delete(f);
-            error('Simulation cancelled.')
-        end
         %bubbles{jj}.poiseuille = 2;
         %while(bubbles{jj}.poiseuille>1);bubbles{jj}.poiseuille = abs(std*randn(1));end % normal distribution of mean 0 and std = 0.5
         bubbles_pqt{trj}.poiseuille_original = v_poiseuille(floor(length(v_poiseuille)*rand)+1);
@@ -449,14 +444,16 @@ for pqt = 1:n_paquets % each paquet of trajectories
         %fprintf('2\n');
         while 1 % create new trajectory while too short
             if bypass_N_vs_d_stats == 0
-                random_end_node = 1+round(pdfrnd(0:numel(end_nodes_biff_sorted)-1, N_traject_norm, 1));%randi([1 length(end_nodes)],1,1);
+                %%% It's here where we use the selection probability to
+                %%% generate the index of an end node for a trajectory.
+                random_end_node = all_random_nodes((pqt-1)*bb_per_paquet + trj);
             else % bypass
                 random_end_node = randi([1 length(end_nodes_biff_sorted)],1,1);
             end
             start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
             [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
             edges = table2array(SP.Edges);
-            nodes = [edges(:,1);edges(end,2)]; % It is the previous node!
+            nodes = edges(:,2)-1; % It is the previous node!
             trajectory = pos(nodes,:); % Nodes positions attribution
             d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
             x = rand(1); % random distribution
@@ -673,18 +670,19 @@ for pqt = 1:n_paquets % each paquet of trajectories
         bubbles_pqt{trj}.XYZ_laminar = laminar_xyz;
         bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
         %vertices{jj} = laminar_xyz;
-        [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
-        time_est_str = ['Estimated time to finish (HH:MM:SS): ' ...
-            datestr(estimated_time_hours, 'HH:MM:SS') ' ' ...
-            num2str(round(bubbles_pqt{trj}.ID*100/n_bubbles)) '% - ', ...
-            num2str(bubbles_pqt{trj}.ID)];
-        waitbar(bubbles_pqt{trj}.ID/n_bubbles,f,time_est_str);
+%         [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
+%         time_est_str = ['Estimated time to finish (HH:MM:SS): ' ...
+%             datestr(estimated_time_hours, 'HH:MM:SS') ' ' ...
+%             num2str(round(bubbles_pqt{trj}.ID*100/n_bubbles)) '% - ', ...
+%             num2str(bubbles_pqt{trj}.ID)];
+        prog = ( 100*(bubbles_pqt{trj}.ID/n_bubbles) );
+        fprintf(1,'\b\b\b\b%3.0f%%',prog); pause(0.1);
     end
     %% Save paquet of bubbles
     save([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'],'bubbles_pqt','-v7.3');
     clear bubbles_pqt
 end
-delete(f)
+ fprintf('\n');
 beep2
 
 %% Gather all Microbubbles
@@ -711,8 +709,11 @@ if or(or(display==1,display==2),display==4)
     n_bubbles = size(bubbles,1);
     for jj = 1:n_bubbles_plot
         hold on
-        plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),bubbles{jj}.XYZ_laminar(:,2),bubbles{jj}.XYZ_laminar(:,3),'LineWidth',1,'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
-        plot1.Color(4) = 0.3;
+        plot1 = plot3(bubbles{jj}.XYZ_laminar(:,1),...
+            bubbles{jj}.XYZ_laminar(:,2),...
+            bubbles{jj}.XYZ_laminar(:,3),'LineWidth',2,...
+            'Color', [(bubbles{jj}.poiseuille), 0, 1-bubbles{jj}.poiseuille]);
+        plot1.Color(4) = 0.5;
 %         drawnow
     end
     titre1 = 'Laminar flow simulation with';
@@ -734,15 +735,15 @@ disp('Sorting trajectories...');
 clear flow_array
 flow_array = [];
 stats.RADII = [];
+stats.mean_RADII = [];
 radii_idx = 1;
 for ii = 1:n_bubbles % Sorting as a function of r
-    flow_array(ii,1) = mean(bubbles{ii}.radii);%bubbles{ii}.d_trajectory*mean(bubbles{ii}.radii)^2 ...
-                     %* bubbles{ii}.poiseuille;
     stats.RADII(radii_idx:radii_idx+numel(bubbles{ii}.radii)-1) = bubbles{ii}.radii;
+    stats.mean_RADII(ii,1) = mean(bubbles{ii}.radii);
     radii_idx = radii_idx + numel(bubbles{ii}.radii);
 end
 % flow_array = flow_array/max(flow_array);
-[flow_array_sorted,flow_array_idx] = sort(flow_array,1,'descend');
+[flow_array_sorted,flow_array_idx] = sort(stats.mean_RADII,1,'descend');
 % bubbles_tmp = cell(n_bubbles,1);
 % for ii = 1:n_bubbles
 %     bubbles_tmp{ii} = bubbles{flow_array_idx(ii)};
@@ -762,9 +763,9 @@ rand_pdf_times_N(rand_pdf_times_N > n_bubbles) = n_bubbles; % Fix bound = n_bubb
 
 %% Stats
 disp('Computing statistics...');
-stats.max_d = ceil(max(stats.RADII*2));
-stats.min_d = floor(min(stats.RADII*2));
-[stats.N_hist,stats.DIAMETER_hist] = hist(stats.RADII*2,(stats.max_d-stats.min_d)/2);
+stats.max_d = ceil(max(stats.mean_RADII*2));
+stats.min_d = floor(min(stats.mean_RADII*2));
+[stats.N_hist,stats.DIAMETER_hist] = hist(stats.mean_RADII*2,(stats.max_d-stats.min_d)/2);
 stats.not_zeros_in_N = not(stats.N_hist==0);
 stats.N_hist = stats.N_hist(stats.not_zeros_in_N);
 stats.DIAMETER_hist = stats.DIAMETER_hist(stats.not_zeros_in_N);
@@ -779,7 +780,7 @@ stats.X = [ones(length(stats.x),1) stats.x];
 stats.b = stats.X\stats.y;
 stats.yCalc2 = stats.X*stats.b;
 stats.yHingot = 3.7*stats.x-8.2;
-if display == 3
+if or(display == 1, display == 2)
     figure(12);clf;
     scatter(log(stats.DIAMETER_hist),log(stats.N_hist));hold on;plot(stats.x,stats.yCalc2,'--');
     plot(stats.x,stats.yHingot,'*-')
