@@ -277,12 +277,6 @@ end
 %% 1.6 Poiseuille distribution
 x = linspace(-1,1,1000);
 v_poiseuille = 1-x.^2;
-v_poiseuille_squared = v_poiseuille.^2;
-% figure;plot(x,v_poiseuille);hold on;plot(x,v_poiseuille_squared);
-% %legend('Poiseuille velocity','Velocity squared','Location','Best');
-% xlabel('Normalized diameter')
-% ylabel('Poiseuille value (P)')
-% title('Poiseuille Distribution');
 
 %% 1.7 Pulsatility related parameters
 %%% We emulate a pulsatile flow using a modified ECG. Using a specific
@@ -451,45 +445,42 @@ for pqt = 1:n_paquets % each paquet of trajectories
     % Check for clicked Cancel button
     for trj = 1:bb_per_paquet % each trajectory
         tic
-        %bubbles{jj}.poiseuille = 2;
-        %while(bubbles{jj}.poiseuille>1);bubbles{jj}.poiseuille = abs(std*randn(1));end % normal distribution of mean 0 and std = 0.5
-        bubbles_pqt{trj}.poiseuille_original = v_poiseuille(floor(length(v_poiseuille)*rand)+1);
+        bubbles_pqt{trj}.poiseuille_original = v_poiseuille(floor(length(v_poiseuille)*rand)+1); % random attribtution of a poiseuille coefficient
         bubbles_pqt{trj}.min_poiseuille_reached = 0;
         bubbles_pqt{trj}.dt = dt;
         if(bubbles_pqt{trj}.poiseuille_original < min_poiseuille) % if poiseuille ratio is lower than threshold
-            bubbles_pqt{trj}.poiseuille = min_poiseuille;
-            bubbles_pqt{trj}.min_poiseuille_reached = 1;
+            bubbles_pqt{trj}.poiseuille = min_poiseuille; % Assign minimum value
+            bubbles_pqt{trj}.min_poiseuille_reached = 1; % Assign flag
         else
             bubbles_pqt{trj}.poiseuille = bubbles_pqt{trj}.poiseuille_original;
         end
-        %inter_distance = v*dt*(1-bubbles_pqt{trj}.poiseuille); %(um) node_distance with compensation for radial position from center
         clear X Y Z points new_distances dd distances_point_previous distances_next_previous closest_nodes delta pp ax bx cx dx ay by cy dy az bz cz dz  
-        %fprintf('2\n');
         while 1 % create new trajectory while too short
-            if bypass_N_vs_d_stats == 0
-                %%% It's here where we use the selection probability to
-                %%% generate the index of an end node for a trajectory.
+            if bypass_N_vs_d_stats == 0 % Realistic
+                %%% We generate the index of an end node for a trajectory
+                %%% based on probability of occurence.
                 random_end_node = all_random_nodes((pqt-1)*bb_per_paquet + trj);
-            else % bypass
+            else % random, i.e. non realistic
                 random_end_node = randi([1 length(end_nodes_biff_sorted)],1,1);
             end
-            start = 1;%randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
+            start = 1; % We start ad node #1
+%             start = randi([1 size(s,1)],1,1) % random integer from [1:#source_nodes]
             [SP, ~] = shortestpathtree(DG,start,end_nodes_biff_sorted(random_end_node)); % Shortest path
             edges = table2array(SP.Edges);
             nodes = edges(:,2)-1; % It is the previous node!
             trajectory = pos(nodes,:); % Nodes positions attribution
             d_trajectory = sum(sqrt(sum(diff(trajectory,[],1).^2,2))); % Total length
             x = rand(1); % random distribution
-            if and((d_trajectory > min_length),x<bubbles_pqt{trj}.poiseuille)
+            if and((d_trajectory > min_length),bubbles_pqt{trj}.poiseuille > x)
                 break;
             end
         end
 
-        vf_array = [];
-        ecg_array = [];
-        bubbles_pqt{trj}.d_trajectory = d_trajectory;
-        distances = sqrt(sum(diff(trajectory,[],1).^2,2)); % Distances between each original node of the generated trajectory
-        distances_cum = cumsum(distances); % Cumulated distances
+        vf_array = []; % Initialization
+        ecg_array = []; % Initialization
+        bubbles_pqt{trj}.d_trajectory = d_trajectory; % Trajectory length (um)
+        distances = sqrt(sum(diff(trajectory,[],1).^2,2)); % Distances between each original node of the generated trajectory (um)
+        distances_cum = cumsum(distances); % Cumulated distances (um)
         xyz = trajectory';
         spline_f = cscvn(xyz); % Creation of the cubic splines
         coefficients = spline_f.coefs; % Getting the coefficients
@@ -622,13 +613,12 @@ for pqt = 1:n_paquets % each paquet of trajectories
             end
             dd = new_distances(k-1,1);
         end
-%             new_distances = new_distances;
         vf_array(1) = []; % removing first velocity (= 0)
         ecg_array(1) = []; % removing first velocity (= 0)
         bubbles_pqt{trj}.vf_array = vf_array; % saving velocity
         bubbles_pqt{trj}.ecg_array = ecg_array; % saving velocity
         bubbles_pqt{trj}.closest_nodes = nodes(closest_nodes); % Saving the closest nodes indexes
-        %%%%% Calculation of the new positions using the cubic splines
+        %%%%% Calculation of the new positions using the cubic splines'
         %%%%% coefficients
         L = length(new_distances)-1;
         d = new_distances;
@@ -656,48 +646,40 @@ for pqt = 1:n_paquets % each paquet of trajectories
         XYZ_centerLine = horzcat(X,Y,Z);
         %%% Laminar flow calculation
         clear xyz parallel perpendicular perpendicular2 radii
+        %%% Computing vector parallel to the trajectory
         parallel = [XYZ_centerLine(2:end,1)-XYZ_centerLine(1:end-1,1) ...
                     XYZ_centerLine(2:end,2)-XYZ_centerLine(1:end-1,2) ...
                     XYZ_centerLine(2:end,3)-XYZ_centerLine(1:end-1,3)]; % vectors parallel to the nodes
-        parallel_smooth = smooth(parallel,0.02);
+        parallel_smooth = smooth(parallel,0.02); % Smoothing
         parallel_smooth = reshape(parallel_smooth,[size(parallel,1) 3]);
         parallel = parallel_smooth;
-        perpendicular = zeros(size(parallel,1),3);
-        perpendicular2 = zeros(size(parallel,1),3);
-        for i = 1:size(parallel,1) % Iterate because vectorised function that gives orthogonal vectors of arrays not found
+        perpendicular = zeros(size(parallel,1),3); % Initialization
+        perpendicular2 = zeros(size(parallel,1),3); % Initialization
+        for i = 1:size(parallel,1) % Probably a faster way to do this all at once
             perpendiculars = null(parallel(i,:)); % The null() function returns 2 orthogonal vectors to the set of 2 points
             perpendicular(i,:) = perpendiculars(:,1)'; %perpendicular vector 1
             perpendicular2(i,:) = perpendiculars(:,2)'; %perpendicular vector 2
         end
-        %%% linear combination
+        %%% linear combination of the perpendicular vectors to extract a
+        %%% random radial orientation. With a random radial orientation
+        %%% vector, we can populate any oath in the vessel within the
+        %%% theoretical boundaries of that vessel
         random_combination1 = rand(1);
         random_combination2 = rand(1);
         lin_combination = (-1+2*random_combination1)*perpendicular+...
                           (-1+2*random_combination2)*perpendicular2;
         %%% Normalize the lin_combination vector to obtain a circular
-        %%% distribution rather than a rectangular one
+        %%% distribution rather than a rectangular one. This way, we get a
+        %%% cylindrical flow instead of a rectangular one.
         lin_combination = lin_combination./norm(max(lin_combination));
         %%% Compensate for Poiseuille
         lin_combination = lin_combination.*(sqrt((1-bubbles_pqt{trj}.poiseuille_original))); % compensation of the radial component(lin_combination) by the poiseuille value
-    %     lin_combination_smooth = smooth(lin_combination,'loess');
-    %     lin_combination_smooth = reshape(lin_combination_smooth,[size(lin_combination,1) 3]);
-    %     lin_combination = lin_combination_smooth;
         bubbles_pqt{trj}.radii = abs(r(nodes(closest_nodes)) - padding_bubble); % Radii of the new nodes with compensation with half the bubble size
-        %compensation_radii = radii(2:end,1)-radii(1:end-1,1); % Difference in radius between each node
-        %compensation_radii = (radii(3:end,1)-radii(1:end-2,1))/2; % Centered difference in radius between each node with error of order 2
-        %compensation_radii = smooth(compensation_radii,0.1); % smoothing the derivative curve
-        %compensation_rayon_cumul = cumsum(compensation_radii); % Cumulative difference of the radii between each node
-        %laminar_xyz = zeros(length(xyz),3);
-        %laminar_xyz(1,:) = xyz(1,:)+ lin_combination(1,:).*radii(1); % Point_coordinates + perpendicular_component * radius
-        laminar_xyz = XYZ_centerLine(1:end-1,:) + lin_combination.*bubbles_pqt{trj}.radii(1:end-1);
-        bubbles_pqt{trj}.XYZ_laminar = laminar_xyz;
+        laminar_xyz = XYZ_centerLine(1:end-1,:) + lin_combination.*bubbles_pqt{trj}.radii(1:end-1); % Vertices
+        bubbles_pqt{trj}.XYZ_laminar = laminar_xyz; % Vertices
         bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
-        %vertices{jj} = laminar_xyz;
+        
         [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
-%         time_est_str = ['Estimated time to finish (HH:MM:SS): ' ...
-%             datestr(estimated_time_hours, 'HH:MM:SS') ' ' ...
-%             num2str(round(bubbles_pqt{trj}.ID*100/n_bubbles)) '% - ', ...
-%             num2str(bubbles_pqt{trj}.ID)];
         prog = ( 100*(bubbles_pqt{trj}.ID/n_bubbles) );
         fprintf(1,'\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3.0f%% | %s HH:MM:SS',prog,...
             datestr(estimated_time_hours, 'HH:MM:SS')); 
