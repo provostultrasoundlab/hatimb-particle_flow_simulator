@@ -1,12 +1,26 @@
-clear all
-close all
-clc
+%% Copyrights
+%%% Author: Hatim Belgharbi
+
+%% Featured publications
+
+% Milecki L, Poree J, Belgharbi H, et al. 
+% A Deep Learning Framework for Spatiotemporal Ultrasound Localization 
+% Microscopy. IEEE Trans Med Imaging. 2021;40(5):1428-1437. 
+% doi:10.1109/TMI.2021.3056951
+
+% Hardy E, Porée J, Belgharbi H, Bourquin C, Lesage F, Provost J. 
+% Sparse channel sampling for ultrasound localization microscopy 
+% (SPARSE-ULM). Phys Med Biol. 2021;66(9):10.1088/1361-6560/abf1b6. 
+% Published 2021 Apr 23. doi:10.1088/1361-6560/abf1b6
 
 %% Introduction
-%%% Welcome to the Microbubble (MB) Flow Simulator! 
-%%% The simulation takes place in 3 steps.
-%%% 1) The simulation of MB trajectories
-%%% 2) The steady state simulation
+%%% Welcome. This is a 3D microbubble simulation (MB) framework based on 
+%%% two-photon microscopy (2PM) and in-vivo MB perfusion dynamics.
+%%%
+%%% The simulation takes place in 3 main steps.
+%%% 1) Pre-processing of data before simulation
+%%% 2) Simulation of MB trajectories
+%%% 3) Distributung MB in a steady state flow (SSF)
 
 %%% 1. The first step consists of defining parameters necessary for the
 %%% simulation, such as the framerate, filename, source nodes, target nodes,
@@ -23,11 +37,11 @@ clc
 %%% other words, at each timeframe, we will have the positions of a 
 %%% constant set of MB, in X, Y and Z.
 
-%% Copyrights
-%%% Author: Hatim Belgharbi
+clear all
+close all
+clc
 
-
-%% 0.2 Visualization
+%% 0.1 Visualization
 %%% Choose wheather you would like:
 %%% display = 0; No display
 %%% display = 1; Minimal display
@@ -35,13 +49,13 @@ clc
 
 display = 1; 
 
-%% 1.1 Essential Variables
+%% 0.2 Essential Variables
 %%% Modify these variables according to your specifications. You must plan
 %%% the number of total MB (n_bubbles) to be sufficient to populate your
-%%% steady-state simulation (SSS). The larger the number of MB in the SSS,
-%%% the larger the number of total MB. Same goes for the SSS duration 
-%%% (n_bubbles_steady_state). A longer SSS would require more simulated MB
-%%% trajectories to populate the SSS for a longer period of time.
+%%% steady-state flow (SSF). The larger the number of MB in the SSF,
+%%% the larger the number of total MB required. Same goes for the SSF duration 
+%%% (n_bubbles_steady_state). A longer SSF would require more simulated MB
+%%% trajectories to populate the SSF for a longer period of time.
 
 name = 'tree5';     % Name of the .swc graph model
 file_name = 'test'; % Name of the dataset
@@ -59,14 +73,14 @@ bubble_size = 2;        % MB diameter (um)
 pulsatility = 1;        % 1 = Yes | 0 = No
 
 %%% The bypass_N_vs_d_stats parameter enables a simulation where the number
-%%% of MB per diameter constraint to be violated. This allows the simulation
+%%% of MB per diameter constraint is disabled. This allows the simulation
 %%% of all possible trajectories. You would choose this option if you are
 %%% less concerned with a realistic MB distribution and more concerned in
-%%% filling more small vessels.
+%%% filling more of the smaller vessels.
 
 bypass_N_vs_d_stats = 1;% 0: Realistic, 1: Non-realistic
 
-%% 0.1 Path and Folders Management
+%% 0.3 Path and Folders Management
 %%% Generating paths to folders of the simulator. Also creates a folder for
 %%% saving in the parent folder of the root of the simulator to avoid
 %%% saving directly in the git-managed folder.
@@ -84,7 +98,7 @@ save_path = [root_dir save_dir '\'];
 
 mkdir(root_dir,[save_dir '\temp']);
 
-%% 1.2 Loading and processing the graph model
+%% 1.1 Loading and processing the graph model
 %%% The "tree5.swc" dataset is extracted from data presented in the 
 %%% following article and used here with permission of the owner:
 %%% R. Damseh et al., "Automatic Graph-Based Modeling of Brain 
@@ -131,7 +145,7 @@ if or(display == 1, display == 2)
 end
 drawnow
 
-%% 1.3 Positions scaling
+%% 1.2 Positions scaling
 %%% If the dataset has anisotropic voxel, i.e. the dimension of each voxel
 %%% is not the same or is not in um, use this section to strech or compress
 %%% positions to their real dimention.
@@ -144,7 +158,7 @@ drawnow
 % pos(:,3) = pos(:,3) * dim_3;
 % r = r .* (dim_1+dim_2)/2;
 
-%% 1.4 Source, target, end and bifurcation nodes
+%% 1.3 Source, target, end and bifurcation nodes
 %%% Using source nodes from the file, we modify them to be used in MATLAB
 %%% with coefficients starting with 1
 s = source+2;   % Source nodes
@@ -160,7 +174,7 @@ clear C
 [uniqueA, i, j] = unique(s,'first');        % Finding unique nodes
 tmp = find(not(ismember(1:numel(s),i)));    % idx of duplicates
 tmp2 = s(tmp);                              % duplicates
-[biff_nodes, ii, jj] = unique(tmp2,'first');% Keeping only first occurence
+[biff_nodes, ~, ~] = unique(tmp2,'first');% Keeping only first occurence
 biff_nodes = biff_nodes-1; % it is the previous node
 
 if display == 2
@@ -202,7 +216,7 @@ if display == 1
     set(gcf,'color','w');
 end
 
-%% 1.5 Total network length calculation
+%% 1.4 Total network length calculation
 %%% Parallel vectors between all nodes
 parallel_vectors_between_nodes = pos(t(1:length(t)-1),:) -...
                                  pos(s(1:length(t)-1),:); 
@@ -212,7 +226,7 @@ parallel_vectors_between_nodes = pos(t(1:length(t)-1),:) -...
 %%% Summing all norms to get total length
 total_network_length = sum(all_node_node_distances);% um
 
-%% 1.6 Calculating velocity-diameter and number of MB-diameter relationships
+%% 1.5 Calculating velocity-diameter and number of MB-diameter relationships
 %%% In the article: Hingot, V., Errico, C., Heiles, B. et al.
 %%% Microvascular flow dictates the comprimise between spatial resolution
 %%% and acquisition time in Ultrasound Localisation Microscopy. Sci Rep 9,
@@ -232,7 +246,7 @@ v_sample_um = v_sample*1000;            % Velocities sample (um)
 d_sample = 2*r;             % Diameters in our sample network (mm)
 N_sample_log = 3.7*d_sample_log -8.2;   % Number of MB log in our sample
 N_sample = exp(N_sample_log);           % Number of MB in our sample
-%%% Affichage
+%%% Display
 if display == 2 
     figure(6);clf
     subplot(2,3,1);plot(log_d,log_N,'LineWidth',2);
@@ -260,7 +274,7 @@ if display == 2
     %axis([15 45 0 3.5]);
 end
 
-%% 1.7 Poiseuille distribution
+%% 1.6 Poiseuille distribution
 x = linspace(-1,1,1000);
 v_poiseuille = 1-x.^2;
 v_poiseuille_squared = v_poiseuille.^2;
@@ -270,7 +284,7 @@ v_poiseuille_squared = v_poiseuille.^2;
 % ylabel('Poiseuille value (P)')
 % title('Poiseuille Distribution');
 
-%% 1.8 Pulsatility related parameters
+%% 1.7 Pulsatility related parameters
 %%% We emulate a pulsatile flow using a modified ECG. Using a specific
 %%% heart frequency, we can multiply MB velocities with a normalized 
 %%% factor as a function of time and vessel position later on.
@@ -312,13 +326,13 @@ if display == 2
 end
 clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 
-%% 1.9 Trajectories statistics
+%% 1.8 Trajectories statistics
 %%% Here, we compute, for all possible trajectories, statistics such as the
 %%% average vessel radius, minimal vessel radius, and so on to bo used in
 %%% the next section. 
 disp('Computing trajectories statistics... ~5-10 min');
 DG = digraph(s,t,r_inverse); % Directed graph generation
-end_nodes_biff = [t];%s(2:end);% Merge endnodes and bifurcation nodes
+end_nodes_biff = t;%s(2:end);% Merge endnodes and bifurcation nodes
 %%% Initialization of variables
 d_TRAJECTORIES = zeros(1,numel(end_nodes_biff));
 mean_RADII = zeros(1,numel(end_nodes_biff));
@@ -366,7 +380,7 @@ if display == 2
 end
 toc
 beep2
-%% 1.10 Trajectories selection probability
+%% 1.9 Trajectories selection probability
 disp('Computing trajectories selection probability...');
 min_length = 20; % Minimum bubble trajectory length (um) (empirically chosen)
 % end_nodes_sorted = end_nodes(Idx_min);
@@ -407,22 +421,30 @@ for i = 1:numel(radii_unique)
     N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i); % Divide probability by number of times that radius is repeated
 end
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
-%% 2.1 Simuation
+
+%% 2.1 MB trajectories simuation
+%%% In section 2, we will compute all MB trajectories, one by one. To avoid
+%%% filling the RAM which slows down the process, MB trajectories are 
+%%% saved in small batches (paquets) locally, then gathered when all
+%%% of them are saved. 
+%%% As of now, all position of each trajectory are calculated one by one.
+%%% A new MB position is calculated differently based on whether it is 
+%%% before or after the forst graph node, and if the closest node is the
+%%% next or previous one, hence the 4 IF statement. This can be optimized
+%%% for faster computation.
+
 disp('Starting simulation...');
 fprintf('\n.......................');% Adding dots as spacers for fprintf at the end of the loop
+
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
-% bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
-min_poiseuille = 0.2; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
-% DG = digraph(s,t,r_inverse); % Directed graph generation
-velocity_multiplicator = 1; % Not in use for now
+min_poiseuille = 0.3; % Minimum Poiseuille value (a value of 0 causes an infinite computation time since the bubble doesn't move)
 v_propagation = NaN;
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 n_paquets = n_bubbles/bb_per_paquet;
-%%%
-% N_traject_norm = N_traject_norm+0.000001*rand(size(N_traject_norm));
 all_random_nodes = 1+round(pdfrnd(0:numel(end_nodes_biff_sorted)-1, N_traject_norm, n_bubbles));
+
 for pqt = 1:n_paquets % each paquet of trajectories
     clear bubbles_pqt % bubbles paquet
     bubbles_pqt = cell(bb_per_paquet,1);
@@ -487,7 +509,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                     if(dd<d_trajectory) % if length not exceeding path length
                         closest_nodes(k-1,1) = previous_node_idxes(k-1,1);
                         if(pulsatility==1)
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            v = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
                                 v_propagation = v_propagation_manual;%v/debug_propagation_factor;
                             end
@@ -500,7 +522,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
-                            vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            vf = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
                             ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd+dt*vf;
@@ -515,7 +537,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                     if(dd<d_trajectory) % if length not exceeding path length
                         closest_nodes(k-1,1) = previous_node_idxes(k-1,1)+1;
                         if(pulsatility==1)
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            v = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
                                 v_propagation = v_propagation_manual;%v/debug_propagation_factor;
                             end
@@ -528,7 +550,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
-                            vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            vf = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
                             ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd + dt*vf;
@@ -549,7 +571,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                     if(dd<d_trajectory) % if length not exceeding path length
                         closest_nodes(k-1,1) = previous_node_idxes(k-1,1);
                         if(pulsatility==1)
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            v = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
                                 v_propagation = v_propagation_manual;%v/debug_propagation_factor;
                             end
@@ -563,7 +585,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             dd = dd + dt*vf;
                         else
                             
-                            vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            vf = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
                             ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd + dt*vf;
@@ -578,7 +600,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             if k == 2 % Finding maximum velocity at begining of trajectory and set it as propagation velocity
                                 v_propagation = v_propagation_manual;%v/debug_propagation_factor;
                             end
-                            v = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            v = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             wave_delay = mod(floor((dd/v_propagation)*(period/dt)),period/dt);
                             wave_index = k+period/dt-wave_delay;%+ (period/dt)-floor((dd/d_trajectory)*(period/dt)); % The propagation wave
                             wave_delays(k-1) = wave_delay;
@@ -588,7 +610,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
                             ecg_array(1,k-1) = ecg_normalized(wave_index); % Save ecg_normalized
                             dd = dd + dt*vf;
                         else
-                            vf = v_sample_um(nodes(closest_nodes(k-1)))*velocity_multiplicator*(bubbles_pqt{trj}.poiseuille);
+                            vf = v_sample_um(nodes(closest_nodes(k-1)))*(bubbles_pqt{trj}.poiseuille);
                             vf_array(1,k-1) = vf; % save velocity
                             ecg_array(1,k-1) = 1; % Save ecg_normalized
                             dd = dd + dt*vf;
@@ -687,7 +709,7 @@ end
  fprintf('\n');
 beep2
 
-%% Gather all Microbubbles
+%% 2.2 Gather all Microbubbles
 %%% In this section, we gather the temporarily saved MB trajectories and
 %%% store them back in the RAM.
 disp('Gathering paquets...')
@@ -732,7 +754,7 @@ if or(or(display==1,display==2),display==4)
 end
 drawnow
 
-%% Sorting Trajectories as a Function of Flow/Radius
+%% 2.3 Sorting Trajectories as a Function of Flow/Radius
 disp('Sorting trajectories...');
 clear flow_array
 flow_array = [];
@@ -744,14 +766,8 @@ for ii = 1:n_bubbles % Sorting as a function of r
     stats.mean_RADII(ii,1) = mean(bubbles{ii}.radii);
     radii_idx = radii_idx + numel(bubbles{ii}.radii);
 end
-% flow_array = flow_array/max(flow_array);
 [flow_array_sorted,flow_array_idx] = sort(stats.mean_RADII,1,'descend');
-% bubbles_tmp = cell(n_bubbles,1);
-% for ii = 1:n_bubbles
-%     bubbles_tmp{ii} = bubbles{flow_array_idx(ii)};
-% end
-% bubbles = bubbles_tmp;
-% clear bubbles_tmp
+
 r_mean_sample = linspace(flow_array_sorted(1),flow_array_sorted(end),n_bubbles);
 d_mean_sample_log = log(2*r_mean_sample);
 N_mean_sample_log = 3.7*d_mean_sample_log;
@@ -763,7 +779,7 @@ rand_pdf_times_N = floor(rand_pdf_times_N./max(rand_pdf_times_N)...
 rand_pdf_times_N(rand_pdf_times_N > n_bubbles) = n_bubbles; % Fix bound = n_bubbles
 %                                      % to take in the SS calculation
 
-%% Stats
+%% 2.4 Computing statistics
 disp('Computing statistics...');
 stats.max_d = ceil(max(stats.mean_RADII*2));
 stats.min_d = floor(min(stats.mean_RADII*2));
@@ -771,7 +787,7 @@ stats.min_d = floor(min(stats.mean_RADII*2));
 stats.not_zeros_in_N = not(stats.N_hist==0);
 stats.N_hist = stats.N_hist(stats.not_zeros_in_N);
 stats.DIAMETER_hist = stats.DIAMETER_hist(stats.not_zeros_in_N);
-if or(display == 1, display == 2)
+if display == 2
     figure(11);clf;
     hist(stats.RADII*2,10);title('DIAMETERS');
     xlabel('d (\mum)');ylabel('N');
@@ -794,10 +810,7 @@ if display == 2
     end
     legend_title = ['y = ' num2str(stats.b(2)) 'x + ' num2str(stats.b(1))];
     legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
-end
 
-%%
-if display == 2
     figure(13);clf
     hist(rand_pdf_times_N,100);title('SS Flow Bubbles Probability');
     xlabel('Bubble ID');ylabel('N');
@@ -816,7 +829,7 @@ if display == 2
     plot(flow_array_sorted)
 end
 
-%% Save
+%% 2.5 Save MB trajectories locally
 disp('Saving bubbles...')
 save_file_name = [file_name, '_', num2str(n_bubbles), '_bubbles_', ...
     num2str(n_bubbles_steady_state),'_bubbles_per_frame_', num2str(samp_freq),...
@@ -826,7 +839,7 @@ save([save_path 'bubbles_',save_file_name,'.mat'],'bubbles','samp_freq',...
     'pulsatility','slope','intercept','stats','v_propagation_manual',...
     'filename','-v7.3');
 
-%% Steady state flow calculation
+%% 3.1 Steady state flow calculation
 disp('Starting steady state flow calculation...');
 clear frames frames_velocities
 dt = bubbles{1}.dt;
@@ -838,7 +851,6 @@ k = 1;  % Bubble per frame counter (row in frames matrix)
 ii = 1; % Frame number times 5
 frm = 1; % frame number
 tot_toc = 0;
-% frames_velocities(:,1) = zeros(n_bubbles_steady_state,1);
 frames_velocities = NaN(n_bubbles_steady_state,n_frames); % bubbles velocities
 frames_ecg = NaN(n_bubbles_steady_state,n_frames); % bubbles ecg amplitude
 frames_radii = zeros(n_bubbles_steady_state,n_frames);
@@ -875,7 +887,7 @@ else
     while frm <= n_frames
         tic
         loop_counter = loop_counter+1;
-        while k <= n_bubbles_steady_state % Fill the column with bubbles IDs and time index ii (3 equivalent to 3*dt)
+        while k <= n_bubbles_steady_state % Fill the column with bubbles IDs and time stamp index ii
             if(size(bubbles{frames(k,ii-5)}.XYZ_laminar,1) > frames(k,ii-4)) % The trajectory is not ended
                 frames(k,ii) = frames(k,ii-5);
                 frames(k,ii+1) = frames(k,ii-4)+1;
@@ -884,24 +896,10 @@ else
                 frames_ecg(k,frm) = bubbles{frames(k,ii)}.ecg_array(frames(k,ii+1));
                 frames_radii(k,frm) = bubbles{frames(k,ii)}.radii(frames(k,ii+1));
                 frames_poiseuille(k,frm) = bubbles{frames(k,ii)}.poiseuille;
-%                 xyz = [frames(k,(ii-5)+(2:4)); frames(k,[ii+(2:4)])];
-%                 frames_velocities(k,loop_counter+1) = sqrt(sum(diff(xyz,[],1).^2,2));
-%                 frames_velocities(k,loop_counter+1) = smooth(frames_velocities(k,loop_counter+1));
             else
                 bubble_count = bubble_count + 1; % add new bubble
                 frames(k,ii) = rand_pdf_times_N(bubble_count);
                 if(pulsatility == 1)
-%                     if(k <= size(bubbles{bubble_count}.wave_delays,2))
-%                         sync_pos = period/dt + mod(bubbles{bubble_count}.wave_delays(k),period/dt)+1;%mod(k,period/dt)+1;
-%                     else
-%                         sync_pos = period/dt + mod(k,period/dt)+1;%mod(k,period/dt)+1;
-%                     end
-%                     if sync_pos <= size(bubbles{bubble_count}.new_distances,1)
-%                         dd = bubbles{bubble_count}.new_distances(sync_pos);
-%                     else
-%                         dd = 1;
-%                     end
-%                     wave_index = period/dt-mod(floor((dd/v_propagation)*(period/dt)),period/dt);
                     sync_pos = mod(loop_counter,period/dt)+1;
                     if(sync_pos <= size(bubbles{frames(k,ii)}.XYZ_laminar,1)) % if synchronized position is possible
                         frames(k,ii+1) = sync_pos; % generate position synchronized with frame
@@ -924,8 +922,6 @@ else
         k = 1;
     tot_toc = DisplayEstimatedTimeOfLoop(tot_toc+toc, loop_counter, n_frames);
     end
-%     max_velocity = max(max(frames_velocities));
-%     frames_velocities = frames_velocities./max_velocity;
     frames_label = ['Bubble ID | Bubble index | X(um) | Y(um) | Z(um)'];
     frames_param.dt = dt;
     frames_param.pulsatility = pulsatility;
@@ -941,13 +937,14 @@ disp('Successfully saved frames!')
 fprintf('Theoretically, you could have simulated a maximum of  %3.1f s\n',...
     (n_bubbles/bubble_count*t_steady_state));
 
-%% Plot steady state flow
+%% 4.1 Plot steady state flow
+%%% Here we plot a constant MB concentration in time. 
 if or(display==1,display==2)
     n_bubbles_steady_state = size(frames,1);
     figure(17);clf
     grid on
     n_frames = size(frames,2)/5;
-    fast_forward = 8;
+    fast_forward = 8; % To speedup the visualization
     moving_average = 10;
     for jj = 11:fast_forward:n_frames-moving_average % Starting at 2 since initial velocities are 0
         view_idx = jj/30;
@@ -959,7 +956,6 @@ if or(display==1,display==2)
         xlim([min(pos(:,1)) max(pos(:,1))]); xlabel('x (\mum)');
         ylim([min(pos(:,3)) max(pos(:,3))]); zlabel('z (\mum)');
         zlim([min(pos(:,2)) max(pos(:,2))]); ylabel('y (\mum)');
-%         view(54-view_idx*100/samp_freq,21) % For rotating view
         view(135,155);camorbit(180,180)
         set(gca,'GridAlpha',0.5);   
         title([num2str(round(jj/samp_freq,2)) ' s'])
