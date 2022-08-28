@@ -82,9 +82,9 @@ pulsatility = 1;        % 1 = Yes | 0 = No
 %%% of MB per diameter constraint is disabled. This allows the simulation
 %%% of all possible trajectories. You would choose this option if you are
 %%% less concerned with a realistic MB distribution and more concerned in
-%%% filling more of the smaller vessels.
+%%% filling more of the smaller vessels for demonstration purposes.
 
-bypass_N_vs_d_stats = 1;% 0: Realistic, 1: Non-realistic
+bypass_N_vs_d_stats = 1; % 0: Realistic, 1: Non-realistic
 
 %% 0.3 Path and Folders Management
 %%% Generating paths to folders of the simulator. Also creates a folder for
