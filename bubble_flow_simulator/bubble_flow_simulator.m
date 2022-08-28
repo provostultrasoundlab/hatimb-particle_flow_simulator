@@ -46,10 +46,10 @@ display = 1;
 name = 'tree5';     % Name of the .swc graph model
 file_name = 'test'; % Name of the dataset
 samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
-n_bubbles = 5000;   % Number of MB trajectories generated
+n_bubbles = 10000;   % Number of MB trajectories generated
 bb_per_paquet = n_bubbles/100;  % n_trajectories per paquet (for storage)
-n_bubbles_steady_state = 10;   % Number of MB in the steady-state (SS) simulation
-t_steady_state = 0.2;   % Desired simulation time (s)
+n_bubbles_steady_state = 1000;   % Number of MB in the steady-state (SS) simulation
+t_steady_state = 1;   % Desired simulation time (s)
 bubble_size = 2;        % MB diameter (um)
 
 %%% The pulsatility parameter enables you to choose to apply a pulsatile
@@ -64,7 +64,7 @@ pulsatility = 1;        % 1 = Yes | 0 = No
 %%% less concerned with a realistic MB distribution and more concerned in
 %%% filling more small vessels.
 
-bypass_N_vs_d_stats = 0;% 0: Realistic, 1: Non-realistic
+bypass_N_vs_d_stats = 1;% 0: Realistic, 1: Non-realistic
 
 %% 0.1 Path and Folders Management
 %%% Generating paths to folders of the simulator. Also creates a folder for
@@ -127,6 +127,7 @@ if or(display == 1, display == 2)
     xlabel('x (\mum)')
     ylabel('y (\mum)')
     zlabel('z (\mum)')
+    title('Graph Network');
 end
 drawnow
 
@@ -315,7 +316,7 @@ clear ecg_filtered3 ecg_filtered2 ecg_filtered ecg_raw
 %%% Here, we compute, for all possible trajectories, statistics such as the
 %%% average vessel radius, minimal vessel radius, and so on to bo used in
 %%% the next section. 
-disp('Computing trajectories statistics...');
+disp('Computing trajectories statistics... ~5-10 min');
 DG = digraph(s,t,r_inverse); % Directed graph generation
 end_nodes_biff = [t];%s(2:end);% Merge endnodes and bifurcation nodes
 %%% Initialization of variables
@@ -408,7 +409,7 @@ end
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 %% 2.1 Simuation
 disp('Starting simulation...');
-fprintf('\n...');
+fprintf('\n.......................');% Adding dots as spacers for fprintf at the end of the loop
 padding_bubble = bubble_size/2; % To account for the fact that the bubbles are not infinitesimal points
 % bubbles = cell(1,1);%cell(n_bubbles,1); % Initialization
 tot_toc = 0; % For displaying progress to the user
@@ -670,13 +671,14 @@ for pqt = 1:n_paquets % each paquet of trajectories
         bubbles_pqt{trj}.XYZ_laminar = laminar_xyz;
         bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
         %vertices{jj} = laminar_xyz;
-%         [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
+        [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
 %         time_est_str = ['Estimated time to finish (HH:MM:SS): ' ...
 %             datestr(estimated_time_hours, 'HH:MM:SS') ' ' ...
 %             num2str(round(bubbles_pqt{trj}.ID*100/n_bubbles)) '% - ', ...
 %             num2str(bubbles_pqt{trj}.ID)];
         prog = ( 100*(bubbles_pqt{trj}.ID/n_bubbles) );
-        fprintf(1,'\b\b\b\b%3.0f%%',prog); pause(0.1);
+        fprintf(1,'\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3.0f%% | %s HH:MM:SS',prog,...
+            datestr(estimated_time_hours, 'HH:MM:SS')); 
     end
     %% Save paquet of bubbles
     save([save_path 'temp\' 'bubbles_pqt_',file_name,'_paquet_',num2str(pqt),'_.mat'],'bubbles_pqt','-v7.3');
