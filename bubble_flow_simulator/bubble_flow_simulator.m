@@ -791,6 +791,7 @@ if display == 2
         title('Log-Log N vs d')
     else
         title('Log-Log N vs d | Warning: N vs d constraint bypassed')
+    end
     legend_title = ['y = ' num2str(stats.b(2)) 'x + ' num2str(stats.b(1))];
     legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
 end
