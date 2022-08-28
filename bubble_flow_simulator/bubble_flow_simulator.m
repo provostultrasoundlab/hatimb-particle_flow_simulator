@@ -628,7 +628,9 @@ for pqt = 1:n_paquets % each paquet of trajectories
         %%%%% coefficients
         L = length(new_distances)-1;
         d = new_distances;
-        delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
+        delta = distances_point_previous./sqrt(distances_next_previous); % distance_point_previous_normalized with the square root. 
+        % Delta is the scalar used to calculate the position of the new nodes using the distance and the cubic spline
+        % Delta = (r/R)*sqrt(R) , where r : Distance from previous node, and R : local inter-node distance
         % point calculation using spline
         pp = (previous_node_idxes(1:L)-1)*3 +1; % Array created to get the good indices of oefficients
         ax = coefficients(pp,1);
