@@ -6,12 +6,18 @@
 % Milecki L, Poree J, Belgharbi H, et al. 
 % A Deep Learning Framework for Spatiotemporal Ultrasound Localization 
 % Microscopy. IEEE Trans Med Imaging. 2021;40(5):1428-1437. 
-% doi:10.1109/TMI.2021.3056951
+% doi.org/10.1109/TMI.2021.3056951
 
 % Hardy E, Porée J, Belgharbi H, Bourquin C, Lesage F, Provost J. 
 % Sparse channel sampling for ultrasound localization microscopy 
 % (SPARSE-ULM). Phys Med Biol. 2021;66(9):10.1088/1361-6560/abf1b6. 
-% Published 2021 Apr 23. doi:10.1088/1361-6560/abf1b6
+% Published 2021 Apr 23. doi.org/10.1088/1361-6560/abf1b6
+
+% Belgharbi H, Porée J, Damseh R, Perrot V, Delafontaine-Martel P,
+% Lesage F, Provost J.
+% An Anatomically and Hemodynamically Realistic Simulation Framework 
+% for 3D Ultrasound Localization Microscopy. Biorxiv. 2021. 
+% doi.org/10.1101/2021.10.08.463259
 
 %% Introduction
 %%% Welcome. This is a 3D microbubble simulation (MB) framework based on 
@@ -62,7 +68,7 @@ file_name = 'test'; % Name of the dataset
 samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
 n_bubbles = 10000;   % Number of MB trajectories generated
 bb_per_paquet = n_bubbles/100;  % n_trajectories per paquet (for storage)
-n_bubbles_steady_state = 1000;   % Number of MB in the steady-state (SS) simulation
+n_bubbles_steady_state = 3000;   % Number of MB in the steady-state (SS) simulation
 t_steady_state = 1;   % Desired simulation time (s)
 bubble_size = 2;        % MB diameter (um)
 
@@ -678,7 +684,7 @@ for pqt = 1:n_paquets % each paquet of trajectories
         laminar_xyz = XYZ_centerLine(1:end-1,:) + lin_combination.*bubbles_pqt{trj}.radii(1:end-1); % Vertices
         bubbles_pqt{trj}.XYZ_laminar = laminar_xyz; % Vertices
         bubbles_pqt{trj}.ID = (pqt-1)*bb_per_paquet + trj;
-        
+
         [tot_toc, estimated_time_hours] = DisplayEstimatedTimeOfLoop(tot_toc+toc, bubbles_pqt{trj}.ID, n_bubbles); % Show progress to the user
         prog = ( 100*(bubbles_pqt{trj}.ID/n_bubbles) );
         fprintf(1,'\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b%3.0f%% | %s HH:MM:SS',prog,...
@@ -707,7 +713,7 @@ clear bubbles_pqt
 delete([save_path 'temp\' 'bubbles_pqt_',file_name '*'])
 %% Plot trajectories
 n_bubbles_plot = 200;
-if or(or(display==1,display==2),display==4)
+if or(display==1,display==2)
     disp('Plotting Trajectories...');
     figure(10)
     clf
@@ -933,7 +939,8 @@ if or(display==1,display==2)
         pp = 3 + (jj-1)*5;
         c = jet(1001);
         scatter3(frames(:,pp),frames(:,pp+2),frames(:,pp+1),3,...
-        c(ceil(1000*sqrt(((frames_velocities(:,jj)./max(max(frames_velocities(:,jj-moving_average:jj+moving_average)))))))+1,:));
+        c(ceil(1000*sqrt(((frames_velocities(:,jj)./...
+        max(max(frames_velocities(:,jj-moving_average:jj+moving_average)))))))+1,:));
         axis equal
         xlim([min(pos(:,1)) max(pos(:,1))]); xlabel('x (\mum)');
         ylim([min(pos(:,3)) max(pos(:,3))]); zlabel('z (\mum)');
