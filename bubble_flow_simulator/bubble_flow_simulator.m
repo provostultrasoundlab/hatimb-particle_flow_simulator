@@ -782,11 +782,15 @@ stats.X = [ones(length(stats.x),1) stats.x];
 stats.b = stats.X\stats.y;
 stats.yCalc2 = stats.X*stats.b;
 stats.yHingot = 3.7*stats.x-8.2;
-if or(display == 1, display == 2)
+if display == 2
     figure(12);clf;
     scatter(log(stats.DIAMETER_hist),log(stats.N_hist));hold on;plot(stats.x,stats.yCalc2,'--');
     plot(stats.x,stats.yHingot,'*-')
-    xlabel('Log diameter');ylabel('Log N');title('Log-Log N vs d')
+    xlabel('Log diameter');ylabel('Log N');
+    if bypass_N_vs_d_stats == 0
+        title('Log-Log N vs d')
+    else
+        title('Log-Log N vs d | Warning: N vs d constraint bypassed')
     legend_title = ['y = ' num2str(stats.b(2)) 'x + ' num2str(stats.b(1))];
     legend('Count per diameter',legend_title,'Ref: y = 3.5x -8.5','Location','Best');
 end
