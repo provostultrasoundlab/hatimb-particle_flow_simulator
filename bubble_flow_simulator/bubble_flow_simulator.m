@@ -27,40 +27,23 @@ clc
 %%% Author: Hatim Belgharbi
 
 
-%% 0.1 Path and Folders Management
-%%% Generating paths to folders of the simulator. Also creates a folder for
-%%% saving in the parent folder of the root of the simulator to avoid
-%%% saving directly in the git-managed folder.
-
-addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
-root = dir('..\..\');
-root_dir = root(1).folder;
-save_dir = '\hatimb-particle_flow_simulator_DATA';
-mkdir(root_dir,save_dir);
-save_path = [root_dir save_dir '\'];
-
-%%% Since we divide the simulation in paquets to reduce RAM utilization
-%%% during simulation, a directory is created to contain temporary paquets
-%%% of microbubble (MB) trajectories.
-
-mkdir(root_dir,[save_dir '\temp']);
-
 %% 0.2 Visualization
 %%% Choose wheather you would like:
 %%% display = 0; No display
 %%% display = 1; Minimal display
 %%% display = 2; All display
 
-display = 0; 
+display = 1; 
 
 %% 1.1 Essential Variables
 %%% Modify these variables according to your specifications. You must plan
 %%% the number of total MB (n_bubbles) to be sufficient to populate your
 %%% steady-state simulation (SSS). The larger the number of MB in the SSS,
 %%% the larger the number of total MB. Same goes for the SSS duration 
-%%% (n_bubbles_steady_state). 
+%%% (n_bubbles_steady_state). A longer SSS would require more simulated MB
+%%% trajectories to populate the SSS for a longer period of time.
 
-disp('Running...')
+name = 'tree5';     % Name of the .swc graph model
 file_name = 'test'; % Name of the dataset
 samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
 n_bubbles = 5000;   % Number of MB trajectories generated
@@ -70,16 +53,36 @@ t_steady_state = 0.2;   % Desired simulation time (s)
 bubble_size = 2;        % MB diameter (um)
 
 %%% The pulsatility parameter enables you to choose to apply a pulsatile
-%%% flow to your MB trajectories. You can also modify the default
-%%% pulsatility parameters in the corresponding section.
+%%% flow to your MB trajectories. Section 1.8 details some parameters used
+%%% to replicate a pulsatile flow.
 
 pulsatility = 1;        % 1 = Yes | 0 = No
 
 %%% The bypass_N_vs_d_stats parameter enables a simulation where the number
-%%% of MB per diameter statistic to be violated. This allows for simulation
-%%% of all possible trajectories.
+%%% of MB per diameter constraint to be violated. This allows the simulation
+%%% of all possible trajectories. You would choose this option if you are
+%%% less concerned with a realistic MB distribution and more concerned in
+%%% filling more small vessels.
 
-bypass_N_vs_d_stats = 0;% 0: False, 1: True
+bypass_N_vs_d_stats = 0;% 0: Realistic, 1: Non-realistic
+
+%% 0.1 Path and Folders Management
+%%% Generating paths to folders of the simulator. Also creates a folder for
+%%% saving in the parent folder of the root of the simulator to avoid
+%%% saving directly in the git-managed folder.
+disp('Running...')
+addpath(genpath('..\..\hatimb-particle_flow_simulator\'));
+root = dir('..\..\');
+root_dir = root(1).folder;
+save_dir = '\hatimb-particle_flow_simulator_DATA'; % Data is stored outide the Github folder
+mkdir(root_dir,save_dir);
+save_path = [root_dir save_dir '\'];
+
+%%% Since we divide the simulation in paquets to reduce RAM utilization
+%%% during simulation, a directory is created to contain temporary paquets
+%%% of microbubble (MB) trajectories.
+
+mkdir(root_dir,[save_dir '\temp']);
 
 %% 1.2 Loading and processing the graph model
 %%% The "tree5.swc" dataset is extracted from data presented in the 
@@ -95,7 +98,6 @@ bypass_N_vs_d_stats = 0;% 0: False, 1: True
 %%% .swc tree file, you must convert the directed graph into a tree graph
 %%% and save it.
 
-name = 'tree5';     % Name of the .swc graph model
 filename = [name '.swc'];
 g = importdata(filename);
 
@@ -365,7 +367,7 @@ toc
 beep2
 %% 1.10 Trajectories selection probability
 disp('Computing trajectories selection probability...');
-min_length = 20; % Minimum bubble trajectory length (um)
+min_length = 20; % Minimum bubble trajectory length (um) (empirically chosen)
 % end_nodes_sorted = end_nodes(Idx_min);
 end_nodes_biff_sorted = end_nodes_biff(Idx_min);
 d_TRAJECTORIES_sorted = d_TRAJECTORIES(Idx_min);
@@ -374,37 +376,35 @@ long_traject_idx = find(d_TRAJECTORIES_sorted>min_length);
 end_nodes_biff_sorted = end_nodes_biff_sorted(long_traject_idx);
 min_RADII_sorted_long = min_RADII_sorted(long_traject_idx);
 %%%
-radii = min_RADII_sorted_long; % rounding to units
-radii_rounded = round(min_RADII_sorted_long);
+radii = min_RADII_sorted_long; 
+radii_rounded = round(min_RADII_sorted_long); % rounding
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
 n_radii = numel(radii_unique);% number of differrent radii
 %%% Using a relationship in the form of N = slope*diameter + intercept,
 %%% where N is the MB count per diameter. Inspired from Hingot, V., Errico,
 %%% C., Heiles, B. et al. Sci Rep 2019, figure 4 C.
-%%% Using a histogram later on, we tweeked the "slope" value to get closer
-%%% to the 3.7 in the article.
+
 slope = 3.7;
-%%% Since the vascular network is completely different, the only value of
-%%% interest is the slope of the N-vs-diameter dependancy. We want to
-%%% create a probability density function that accounts for the N-vs-d
-%%% dependancy to select the different trajectories.
+%%% The intercept will depend on the total number of MB we end up 
+%%% simulating. The higher the number of simulated MBs, the higher the 
+%%% intercept. We impose a linear relationship (intercept = 0) to 
+%%% normalize the probabilites of the calculated trajectories.
 intercept = 0;  
+
 N_traject_log = slope*(log(radii*2))+intercept; % Number of MB log 
-% N_traject_continuous_log = 3.7*(log(radii_unique_continuous*2)) -8.2;
+
 N_traject = exp(N_traject_log); % Number of MB
-% N_traject_continuous_norm = N_traject_continuous/sum(N_traject_continuous);
-% Let's normalize the N so that sum(N) = 1
-% Let's account for that
+
+%%% Let's normalize the N so that sum(N) = 1
 radii_count = histc(radii_rounded, radii_unique); % this will give the number of occurences of each unique element
-radii_count = fliplr(radii_count);
+radii_count = fliplr(radii_count); 
 radii_unique = sort(radii_unique,'descend');
 for i = 1:numel(radii_unique)
     start = sum(radii_count(1:i-1)) + 1;
     finish = sum(radii_count(1:i));
     N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i); % Divide probability by number of times that radius is repeated
 end
-% N_traject_norm = N_traject_norm.*(d_TRAJECTORIES_norm.^3.5); % compensate probability with length
 N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
 %% 2.1 Simuation
 disp('Starting simulation...');
