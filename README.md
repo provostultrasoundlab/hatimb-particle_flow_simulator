@@ -20,3 +20,13 @@ Here are the columns signification:
 ![Main Image](/images/bubbles_20umDiameter_5000.png)
 
 ![FIG](/images/Pulsatility_GIF.gif)
+
+![FIG](/images/DEMO_20umMB_150000_total_5000_SSF.gif)
+### Parameters used for previous figure:
+1. samp_freq = 1000;   
+1. n_bubbles = 150000;   
+1. n_bubbles_steady_state = 5000;   
+1. t_steady_state = 1;   
+1. bubble_size = 20;     
+1. pulsatility = 1; 
+1. bypass_N_vs_d_stats = 1;
