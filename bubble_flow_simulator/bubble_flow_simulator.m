@@ -63,6 +63,15 @@ display = 1;
 %%% (n_bubbles_steady_state). A longer SSF would require more simulated MB
 %%% trajectories to populate the SSF for a longer period of time.
 
+%%% The pulsatility parameter enables you to choose to apply a pulsatile
+%%% to replicate a pulsatile flow.
+
+%%% The bypass_N_vs_d_stats parameter enables a simulation where the number
+%%% of MB per diameter constraint is disabled. This allows the simulation
+%%% of all possible trajectories. You would choose this option if you are
+%%% less concerned with a realistic MB distribution and more concerned in
+%%% filling more of the smaller vessels for demonstration purposes.
+
 name = 'tree5';     % Name of the .swc graph model
 file_name = 'test'; % Name of the dataset
 samp_freq = 1000;   % Sampling frequency of the MB trajectories (Hz)
@@ -72,17 +81,7 @@ n_bubbles_steady_state = 3000;   % Number of MB in the steady-state (SS) simulat
 t_steady_state = 1;   % Desired simulation time (s)
 bubble_size = 2;        % MB diameter (um)
 
-%%% The pulsatility parameter enables you to choose to apply a pulsatile
-%%% flow to your MB trajectories. Section 1.8 details some parameters used
-%%% to replicate a pulsatile flow.
-
 pulsatility = 1;        % 1 = Yes | 0 = No
-
-%%% The bypass_N_vs_d_stats parameter enables a simulation where the number
-%%% of MB per diameter constraint is disabled. This allows the simulation
-%%% of all possible trajectories. You would choose this option if you are
-%%% less concerned with a realistic MB distribution and more concerned in
-%%% filling more of the smaller vessels for demonstration purposes.
 
 bypass_N_vs_d_stats = 1; % 0: Realistic, 1: Non-realistic
 
@@ -390,7 +389,7 @@ min_RADII_sorted_long = min_RADII_sorted(long_traject_idx);
 %%%
 radii = min_RADII_sorted_long; % Choosing min(radii) to avoid underestimating highly narrowing vessels
 radii_rounded = round(min_RADII_sorted_long); % rounding
-radii_unique = unique(radii_rounded);
+radii_unique = unique(radii_rounded); % Getting non-repeating vessel radii integers
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
 n_radii = numel(radii_unique);% number of differrent radii
 %%% Using a relationship in the form of N = slope*diameter + intercept,
