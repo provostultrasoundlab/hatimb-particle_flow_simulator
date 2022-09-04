@@ -360,10 +360,7 @@ end
 [median_RADII_sorted,Idx_median] = sort(median_RADII,'descend');
 [min_RADII_sorted,Idx_min] = sort(min_RADII,'descend');
 [max_RADII_sorted,Idx_max] = sort(max_RADII,'descend');
-%%% Here we chose to select trajectories using the MINIMUM radius, because
-%%% we think by doing so, we will avoid underestimating the probability of
-%%% selecting a certain trajectory
-d_TRAJECTORIES_norm = min(d_TRAJECTORIES)./d_TRAJECTORIES;
+
 
 if display == 2
     figure(8);clf
