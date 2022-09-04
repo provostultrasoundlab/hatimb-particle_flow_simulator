@@ -417,7 +417,7 @@ for i = 1:numel(radii_unique)
     finish = sum(radii_count(1:i));
     N_traject_norm(start:finish) = N_traject(start:finish)/radii_count(i); % Divide probability by number of times that radius is repeated
 end
-N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize for pdf according to trajectory length
+N_traject_norm = N_traject_norm/sum(N_traject_norm); % normalize pdf
 
 %% 2.1 MB trajectories simuation
 %%% In section 2, we will compute all MB trajectories, one by one. To avoid
