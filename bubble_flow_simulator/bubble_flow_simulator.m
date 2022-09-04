@@ -64,6 +64,7 @@ display = 1;
 %%% trajectories to populate the SSF for a longer period of time.
 
 %%% The pulsatility parameter enables you to choose to apply a pulsatile
+%%% flow to your MB trajectories. Section 1.8 details some parameters used
 %%% to replicate a pulsatile flow.
 
 %%% The bypass_N_vs_d_stats parameter enables a simulation where the number
@@ -439,7 +440,10 @@ v_propagation = NaN;
 std_hingot_velocity = 0;
 debug_propagation_factor = 1; % Propagation slowdown factor
 n_paquets = n_bubbles/bb_per_paquet;
-all_random_nodes = 1+round(pdfrnd(0:numel(end_nodes_biff_sorted)-1, N_traject_norm, n_bubbles));
+%%% Random Sample from Discrete PDF
+%%% https://www.mathworks.com/matlabcentral/fileexchange/37698-random-sample-from-discrete-pdf
+%%% pdfrnd(x, p(x), sampleSize)
+all_random_nodes = 1 + round(pdfrnd(0:numel(end_nodes_biff_sorted)-1, N_traject_norm, n_bubbles));
 
 for pqt = 1:n_paquets % each paquet of trajectories
     clear bubbles_pqt % bubbles paquet
