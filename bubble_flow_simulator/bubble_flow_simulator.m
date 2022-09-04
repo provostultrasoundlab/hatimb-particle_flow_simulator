@@ -388,7 +388,7 @@ long_traject_idx = find(d_TRAJECTORIES_sorted>min_length);
 end_nodes_biff_sorted = end_nodes_biff_sorted(long_traject_idx);
 min_RADII_sorted_long = min_RADII_sorted(long_traject_idx);
 %%%
-radii = min_RADII_sorted_long; 
+radii = min_RADII_sorted_long; % Choosing min(radii) to avoid underestimating highly narrowing vessels
 radii_rounded = round(min_RADII_sorted_long); % rounding
 radii_unique = unique(radii_rounded);
 % radii_unique_continuous = max(radii_unique):-1:min(radii_unique);
