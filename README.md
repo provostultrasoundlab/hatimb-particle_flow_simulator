@@ -32,7 +32,6 @@ Here are the columns signification:
 1. bypass_N_vs_d_stats = 1;
 
 ## Citing the Particle Flow Simulator
-
 If you use this simulator, please cite:
 
 Preprint:
@@ -63,3 +62,6 @@ If you use the provided data, please cite:
   year = {2022},
   howpublished= {10.20383/102.0494}
 } 
+
+## Licence
+Free software: MIT license
