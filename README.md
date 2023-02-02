@@ -34,7 +34,22 @@ Here are the columns signification:
 ## Citing the Particle Flow Simulator
 If you use this simulator, please cite:
 
-Preprint:
+Peer-reviewed:
+- [An Anatomically Realistic Simulation Framework for 3D Ultrasound Localization Microscopy, 2023](https://www.doi.org/10.1109/OJUFFC.2023.3235766)
+
+H. Belgharbi et al., "An Anatomically Realistic Simulation Framework for 3D Ultrasound Localization Microscopy," in IEEE Open Journal of Ultrasonics, Ferroelectrics, and Frequency Control, vol. 3, pp. 1-13, 2023, doi: 10.1109/OJUFFC.2023.3235766.
+
+@ARTICLE{10013486,
+  author={Belgharbi, Hatim and Porée, Jonathan and Damseh, Rafat and Perrot, Vincent and Milecki, Léo and Delafontaine-Martel, Patrick and Lesage, Frédéric and Provost, Jean},
+  journal={IEEE Open Journal of Ultrasonics, Ferroelectrics, and Frequency Control}, 
+  title={An Anatomically Realistic Simulation Framework for 3D Ultrasound Localization Microscopy}, 
+  year={2023},
+  volume={3},
+  number={},
+  pages={1-13},
+  doi={10.1109/OJUFFC.2023.3235766}}
+  
+  Preprint:
 - [An Anatomically and Hemodynamically Realistic Simulation Framework for 3D Ultrasound Localization Microscopy, 2021](https://www.biorxiv.org/content/10.1101/2021.10.08.463259v1.full.pdf)
 
 @article {Belgharbi2021.10.08.463259,
@@ -49,9 +64,7 @@ Preprint:
 	journal = {bioRxiv}
 }
 
-Peer-reviewed:
-- (Not yet available)
-
+  
 ## Related data
 If you use the provided data, please cite:
 - [3D Simulated Microbubble Flow in a Mouse Vascular Network](https://www.frdr-dfdr.ca/repo/dataset/ae5706dc-22fb-41c2-be22-082d893fcb9a)
